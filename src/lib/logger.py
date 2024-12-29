@@ -8,7 +8,8 @@ class Logger():
         self.kinds = {
             "info": f"{self.colors.get('yellow', 'bold')}[INFO]{self.colors.get()}",
             "work": f"{self.colors.get('cyan', 'bold')}[WORK]{self.colors.get()}",
-            "cmd": f"{self.colors.get('blue', 'bold')}[CMD]{self.colors.get()}",
+            "cmd": f"{self.colors.get('blue', 'bold')}[CMD]{self.colors.get(style='underline')}",
+            "out": f"{self.colors.get('blue', 'bold')}[OUT]{self.colors.get(style='underline')}",
             "sucess": f"{self.colors.get('green', 'bold')}[SUCESS]{self.colors.get()}"
         }
         self.start = "》"
@@ -23,6 +24,7 @@ class Logger():
                     print(self.kinds[kind], end=" ")
             message = message.strip()
             print(message)
+            print(self.colors.get(), end="")
 
 class ErrorLogger(Logger):
     def __init__(self, uncolored):
