@@ -4,6 +4,9 @@ import lib.lang as lang
 
 class Parser():
     class InvalidStringReference(BaseException): ...
+    class NotUpperCaseMacroName(BaseException): ...
+    class NotLowerCaseRegister(BaseException): ...
+    class InvalidRegister(BaseException): ...
 
     def __init__(self, pimo_instance):
         self.strings = {}
@@ -77,8 +80,8 @@ class Parser():
         for string_id, string in self.strings.items():
             if id == string_id: return string
     
-    def raise_sourcecode_exception(self, line_content:str, line:int, column:int, message:str):
-        self.pimo_instance.raise_exception(message, f"Line {line}", f"{line_content.strip()}", f"{' ' * column}^")
+    def raise_sourcecode_exception(self, line_content:str, line:int, column:int, exception:BaseException):
+        self.pimo_instance.raise_exception(exception, f"Line {line}", line_content.strip(), f"{' ' * column}^")
 
     def parse(self, content:str):
         segments = []
@@ -138,15 +141,25 @@ class Parser():
                 elif lang.is_a_decimal(part + next_part + next_part_2):
                     token = lang.Token(part + next_part + next_part_2)
                     parts_to_skip = 2
+                elif part == lang.PARAGRAPH and lang.is_a_valid_name(next_part):
+                    macro_name = next_part
+                    if not lang.is_a_upper_name(macro_name):
+                        self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.NotUpperCaseMacroName)
+                    token = lang.Token(macro_name, "macro")
+                    parts_to_skip = 1
+                elif part == lang.PERCENTAGE and lang.is_a_valid_name(next_part):
+                    register = next_part
+                    if not lang.is_a_lower_name(register):
+                        self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.NotLowerCaseRegister)
+                    if not register in ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]:
+                        self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.InvalidRegister)
+                    token = lang.Token(lang.PERCENTAGE + next_part, "register")
+                    parts_to_skip = 1
                 else:
                     token = lang.Token(part)
                 
                 segments[-1]["tokens"].append(token)
             
             segments[-1].pop("parts")
-
-            """
-            TODO: Make decimal support
-            """
 
         return segments

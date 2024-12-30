@@ -16,23 +16,31 @@ class CodeSegment(CodePart):
         self.instructions = []
         self.fm = "segment %specs%\n%instructions%\n"
         self.executable = True
+        self.writeable = False
     
     def add_instruction(self, instruction: str):
         """Adds an assembly instruction to the segment."""
         self.instructions.append(instruction)
+        return len(self.instructions) - 1
     
-    def get_specs(self, executable: bool = False) -> str:
+    def get_specs(self, executable:bool = False, writeable:bool = False) -> str:
         """Returns the specifications for the segment."""
-        return "readable executable" if executable else "readable"
+        r = "readable"
+        if executable: r += " executable"
+        if writeable: r += " writeable"
+        return r
 
     def get_formatted(self, replace_list: dict = None) -> str:
         """Formats the segment with its specifications and instructions."""
-        replace_list = replace_list or {}
-        replace_list.update({
-            "specs": self.get_specs(self.executable),  # Example: always executable
-            "instructions": "\n".join(self.instructions),
-        })
-        return super().get_formatted(replace_list)
+        if len(self.instructions):
+            replace_list = replace_list or {}
+            replace_list.update({
+                "specs": self.get_specs(self.executable, self.writeable),  # Example: always executable
+                "instructions": "\n".join(self.instructions),
+            })
+            return super().get_formatted(replace_list)
+        else:
+            return ""
 
 class Program():
     def __init__(self, architecture: str = "x64"):
@@ -41,6 +49,7 @@ class Program():
         self.segments = []
         self.data_segment = CodeSegment()
         self.data_segment.executable = False
+        self.data_segment.writeable = True
         self.code_segment = CodeSegment()
         self.segments.append(self.code_segment)
         self.segments.append(self.data_segment)
@@ -56,17 +65,17 @@ class Program():
 
     def __add_to_data_segment(self, data: str):
         """Adds data to the data segment."""
-        self.data_segment.add_instruction(self.pass_to_indent(data))
+        return self.data_segment.add_instruction(self.pass_to_indent(data))
     
     def add_to_data_segment(self, name:str, type:str, *args:list[str]):
-        self.__add_to_data_segment(" ".join([name.strip(), type.strip().lower(), ", ".join(self.args_to_string(args))]))
+        return self.__add_to_data_segment(" ".join([name.strip(), type.strip().lower(), ", ".join(self.args_to_string(args))]))
 
     def __add_to_code_segment(self, instruction: str):
         """Adds an instruction to the code segment."""
-        self.code_segment.add_instruction(self.pass_to_indent(instruction))
+        return self.code_segment.add_instruction(self.pass_to_indent(instruction))
 
     def add_to_code_segment(self, instruction:str, *args:list[str]):
-        self.__add_to_code_segment(" ".join([instruction.strip().lower(), ", ".join(self.args_to_string(args))]))
+        return self.__add_to_code_segment(" ".join([instruction.strip().lower(), ", ".join(self.args_to_string(args))]))
 
     def generate_source(self) -> str:
         """Generates the full FASM source code."""

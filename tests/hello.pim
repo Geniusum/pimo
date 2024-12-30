@@ -1,2 +1,8 @@
-#mem 423.2 2
-putc ["Hello"]
+#mem ~ 512
+#acmem ~
+
+#define PI 3.1415926
+
+[3 4]
+
+// putc ["Hello"]
