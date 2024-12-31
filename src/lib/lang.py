@@ -18,6 +18,7 @@ CLOSED_HOOK = "]"
 PARAGRAPH = "§"
 SEMICOLON = ";"
 PERCENTAGE = "%"
+PLUS = "+"
 
 # Two chars
 DOUBLE_HASHTAG = "##"
@@ -26,7 +27,10 @@ SLASH_STAR = "/*"
 STAR_SLASH = "*/"
 
 # Operators
-OPERATORS = [HASHTAG, DOUBLE_HASHTAG, TILDE, PERCENTAGE]
+OPERATORS = [
+             HASHTAG, DOUBLE_HASHTAG, TILDE, PERCENTAGE,
+             PLUS  # Stack operators
+            ]
 
 # Delimiter
 DELIMITERS = [SEMICOLON, OPEN_HOOK, CLOSED_HOOK]
@@ -36,7 +40,7 @@ AL_LETTERS = "abcdefghijklmnopqrstuvwxyz"
 AL_LETTERS_UPPER = AL_LETTERS.upper()
 
 # Digits
-DIGITS = "012345689"
+DIGITS = "0123456789"
 DECIMAL_CHARS = DIGITS + DOT
 HEX_DIGITS = "0123456789abcdef"
 
@@ -150,6 +154,8 @@ def format_tokens(sf:str, tokens:list[Token], overload:bool=False) -> bool:
         elif format == "%i": ftypes.append("integer")
         elif format == "%d": ftypes.append("decimal")
         elif format == "%o": ftypes.append("operator")
+        elif format == "%dl": ftypes.append("delimiter")
+        elif format == "%a": ftypes.append("address")
     
     if not overload:
         if len(tokens) != len(ftypes): return False

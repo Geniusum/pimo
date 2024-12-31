@@ -17,6 +17,7 @@ class Main():
     class InvalidFileExtension(BaseException): ...
     class ExistantAssemblyOutput(BaseException): ...
     class ExistantOutput(BaseException): ...
+    class ExecuteWithoutChangeMod(BaseException): ...
 
     def __init__(self, argv:list[str]) -> None:
         self.arg_parser = argparse.ArgumentParser(prog="pimo", description="Compile .pim programs.")
@@ -30,6 +31,8 @@ class Main():
         self.arg_parser.add_argument("-r", "--replace", action="store_true")  # For replace an existant output file and an existant assembly file
         self.arg_parser.add_argument("-ul", "--uncolored-logs", action="store_true")  # For uncolored logs
         self.arg_parser.add_argument("-ue", "--uncolored-errors", action="store_true")  # For uncolored error
+        self.arg_parser.add_argument("-c", "--chmod", "--change-mod", action="store_true")  # For change mod of the output
+        self.arg_parser.add_argument("-e", "--execute", action="store_true")  # For execute the output after compiling
         self.arg_parser.add_argument("sourcecode", type=str)
         self.args = vars(self.arg_parser.parse_args(argv))
 
@@ -43,12 +46,14 @@ class Main():
         self.replace:bool = self.args["replace"]
         self.uncolored_logs:bool = self.args["uncolored_logs"]
         self.uncolored_errors:bool = self.args["uncolored_errors"]
+        self.change_mod:bool = self.args["chmod"]
+        self.execute:bool = self.args["execute"]
 
         self.sourcecode:str = self.args["sourcecode"]
         
         if not self.output:
             self.output = os.path.join(os.path.dirname(self.sourcecode), os.path.splitext(os.path.basename(self.sourcecode))[0])
-        
+
         self.assembly_output = f"{self.output}.asm"
 
         self.logger = logger.Logger(not self.silent, self.uncolored_logs)
@@ -94,6 +99,9 @@ class Main():
         if self.timer:
             self.start_time = time.time()
             self.logger.log("Timer started.", "work")
+        
+        if self.execute and not self.output:
+            self.raise_exception(self.ExecuteWithoutChangeMod, "You need to add the `-c` change mod option for execute the output.")
 
         if not os.path.exists(self.sourcecode):
             self.raise_exception(self.FileNotFound, self.sourcecode)
@@ -147,6 +155,19 @@ class Main():
             self.logger.log(f"Binary generated at the path `{self.output}`.", "success")
         else:
             self.error_logger.log(f"Binary not found, maybe due to a FASM compilation error.", "error")
+            self.end()
+
+        if self.change_mod:
+            self.logger.log(f"Changing mod due to the `-c` change mod option.", "info")
+            self.execute_command(f"chmod +x {self.output}")
+
+        self.logger.log(f"Executing the output...", "work")
+        try: self.execute_command(f"./{self.output}")
+        except Exception as e:
+            self.error_logger.log(f"Exception during the output execution : {e}", "error")
+            self.end()
+        else:
+            self.logger.log(f"Output executed.", "success")
 
     def end(self):
         if self.direct:
