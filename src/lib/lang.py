@@ -15,9 +15,13 @@ AMPERSAND = "&"
 SPACE = " "
 OPEN_HOOK = "["
 CLOSED_HOOK = "]"
+LESS_THAN = "<"
+GREATER_THAN = ">"
 PARAGRAPH = "§"
 SEMICOLON = ";"
 PERCENTAGE = "%"
+COLON = ":"
+EQUAL = "="
 PLUS = "+"
 
 # Two chars
@@ -28,12 +32,34 @@ STAR_SLASH = "*/"
 
 # Operators
 OPERATORS = [
-             HASHTAG, DOUBLE_HASHTAG, TILDE, PERCENTAGE,
+             HASHTAG, DOUBLE_HASHTAG, TILDE, PERCENTAGE, COLON, PERCENTAGE,
              PLUS  # Stack operators
             ]
 
-# Delimiter
+# Delimiters
 DELIMITERS = [SEMICOLON, OPEN_HOOK, CLOSED_HOOK]
+
+# Registers
+REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
+
+# Instructions
+INSTRUCTIONS = ["exit", "ini"]
+
+# Types
+TYPES_SIZES = {
+    "u8": [1, "integer"],
+    "u16": [2, "integer"],
+    "u24": [3, "integer"],
+    "u32": [4, "integer"],
+    "u64": [8, "integer"],
+    "chr": [1, "string"],
+    "bool": [1, "boolean"],
+    "f32": [4, "decimal"],
+    "f64": [8, "decimal"],
+    "x86": [4, "address"],
+    "x64": [8, "address"]
+}
+TYPES = list(TYPES_SIZES.keys())
 
 # Alphabet
 AL_LETTERS = "abcdefghijklmnopqrstuvwxyz"
@@ -101,6 +127,18 @@ def is_a_delimiter(presumed_delimiter:str):
     if presumed_delimiter.lower() in DELIMITERS: return True
     return False
 
+def is_a_register(presumed_register:str):
+    if presumed_register in REGISTERS: return True
+    return False
+
+def is_a_instruction(presumed_instruction:str):
+    if presumed_instruction.lower() in INSTRUCTIONS: return True
+    return False
+
+def is_a_type(presumed_type:str):
+    if presumed_type in TYPES: return True
+    return False
+
 
 #############
 #  CLASSES  #
@@ -128,6 +166,9 @@ class Token():
             return "delimiter"
         if is_a_operator(self.token_string):
             return "operator"
+        if is_a_instruction(self.token_string):
+            return "instruction"
+        
         return "unknown"
 
     def __str__(self):
@@ -156,6 +197,8 @@ def format_tokens(sf:str, tokens:list[Token], overload:bool=False) -> bool:
         elif format == "%o": ftypes.append("operator")
         elif format == "%dl": ftypes.append("delimiter")
         elif format == "%a": ftypes.append("address")
+        elif format == "%in": ftypes.append("instruction")
+        elif format == "%t": ftypes.append("type")
     
     if not overload:
         if len(tokens) != len(ftypes): return False
@@ -179,8 +222,37 @@ def get_stack_used_size(stack:dict) -> int:
         used_size += element["size"]
     return used_size
 
+def get_memory_used_size(memory:dict) -> int:
+    used_size = 0
+    for element in memory["elements"].values():
+        used_size += element["size"] * element["lenght"]
+    return used_size
+
 def how_much_bytes_decimal(nb: float) -> int:
     try:
         struct.pack('f', nb)
         return 4
     except OverflowError: return 8
+
+def bytes_to_operator(size:int):
+    if size == 1: operator = "byte"
+    elif size == 2: operator = "word"
+    elif size <= 4: operator = "dword"
+    elif size <= 6: operator = "fword"
+    elif size <= 8: operator = "qword"
+    elif size <= 10: operator = "tword"
+    elif size <= 16: operator = "dqword"
+    elif size <= 32: operator = "qqword"
+    elif size <= 64: operator = "dqqword"
+    else:
+        return None, None
+    return operator,
+
+def operator_to_bytes(operator:str):
+    op = {
+        "byte": 1, "word": 2, "dword": 4, "fword": 6, "qword": 8,
+        "tword": 10, "dqword": 16, "qqword": 32, "dqqword": 64
+    }
+    try:
+        return op[operator]
+    except: return None

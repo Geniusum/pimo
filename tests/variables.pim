@@ -1,0 +1,10 @@
+#mem ~ 512
+#acmem ~
+
+ini u8 x = 4
+ini u8 y = 6
+ini u8 z = [2 9 +]
+
+ini chr<13> text % = "Hello, World!"
+
+ini u8<5> numbers % = [2 3 4 5 6]

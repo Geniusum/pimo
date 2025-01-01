@@ -11,8 +11,10 @@ class Compiler():
     class BlockDelimitation(BaseException): ...
     class Evaluation(BaseException): ...
     class StackEvaluation(BaseException): ...
+    class StackInitialization(BaseException): ...
     class ExitInstruction(BaseException): ...
-
+    class IniInstruction(BaseException): ...
+    
     def __init__(self, pimo_instance, architecture:str="x64"):
         self.pimo_instance = pimo_instance
         self.logger:logger.Logger = self.pimo_instance.logger
@@ -35,13 +37,17 @@ class Compiler():
         }
         self.main_scope = self.scopes[self.main_program["id"]]
         self.running_programs = []
+        self.ids = []
     
     def generate_id(self) -> str:
         s = ""
         s += random.choice("abcdef")
         for i in range(23):
             s += random.choice(lang.HEX_DIGITS)
-        return s.upper()
+        s = s.upper()
+        if s in self.ids: s = self.generate_id()
+        self.ids.append(s)
+        return s
     
     def raise_exception(self, line:int, exception:BaseException, *args):
         self.pimo_instance.raise_exception(exception, f"Line {line}", *args)
@@ -53,34 +59,28 @@ class Compiler():
         rtoken:lang.Token
         scope = self.scopes[program["id"]]
 
-        block = {"kind": "stack", "parent": None, "elements": []}
+        block = {"kind": "stack", "parent": None, "size": 128, "elements": []}
         active_block = block
         block_started = False
         
-        def evaluate_stack(stack:list) -> lang.Token:
+        def evaluate_stack(stack:list, stack_size:int) -> lang.Token:
             stack_id = self.generate_id()
             self.stacks[stack_id] = {
-                "size": 128,
+                "size": stack_size,
                 "elements": []
             }
-            asm.add_to_data_segment("stack_" + stack_id, "rb", self.stacks[stack_id]["size"])
+            active_stack = self.stacks[stack_id]
+            asm.add_to_data_segment("stack_" + stack_id, "rb", active_stack["size"])
             asm.add_to_code_segment("mov", asm.get_register("si"), "stack_" + stack_id)
 
             def add_integer(nb:int, size:int=None):
                 if size is None: size = lang.how_much_bytes(nb)
-                if size == 1: operator = "byte"; size_ = 1
-                elif size == 2: operator = "word"; size_ = 2
-                elif size <= 4: operator = "dword"; size_ = 4
-                elif size <= 6: operator = "fword"; size_ = 6
-                elif size <= 8: operator = "qword"; size_ = 8
-                elif size <= 10: operator = "tword"; size_ = 10
-                elif size <= 16: operator = "dqword"; size_ = 16
-                elif size <= 32: operator = "qqword"; size_ = 32
-                elif size <= 64: operator = "dqqword"; size_ = 64
-                else: self.raise_exception(line_nb, self.StackEvaluation, "To big integer.")
+                operator, size_ = lang.bytes_to_operator(size), lang.operator_to_bytes(lang.bytes_to_operator(size))
+                if operator is None or size_ is None:
+                    self.raise_exception(line_nb, self.StackEvaluation, "To big integer.")
                 if free_size < size_:
                     self.raise_exception(line_nb, self.StackEvaluation, "Full stack.")
-                self.stacks[stack_id]["elements"].append({
+                active_stack["elements"].append({
                     "size": size_,
                     "type": token.token_type,
                     "operator": operator
@@ -95,7 +95,7 @@ class Compiler():
                 if size == 4: operator = "dd"
                 else: operator = "dq"
                 data_id = self.generate_id()
-                self.stacks[stack_id]["elements"].append({
+                active_stack["elements"].append({
                     "size": size,
                     "type": token.token_type,
                     "data": data_id,
@@ -111,7 +111,7 @@ class Compiler():
                 size = 1
                 if free_size < size:
                     self.raise_exception(line_nb, self.StackEvaluation, "Full stack.")
-                self.stacks[stack_id]["elements"].append({
+                active_stack["elements"].append({
                     "size": size,
                     "type": token.token_type,
                     "operator": "byte"
@@ -120,9 +120,9 @@ class Compiler():
                 asm.add_to_code_segment("add", asm.get_register("si"), size)
 
             for token in stack:
-                used_size = lang.get_stack_used_size(self.stacks[stack_id])
-                free_size = self.stacks[stack_id]["size"] - used_size
-                if isinstance(token, dict): token = evaluate_stack(token["elements"])
+                used_size = lang.get_stack_used_size(active_stack)
+                free_size = active_stack["size"] - used_size
+                if isinstance(token, dict): token = evaluate_stack(token["elements"], token["size"])
                 if not token: continue
                 if token.verify_type("integer"):
                     nb = int(token.token_string)
@@ -140,18 +140,47 @@ class Compiler():
                     if free_size < size:
                         self.raise_exception(line_nb, self.StackEvaluation, "Full stack.")
                     operator = "qword" if size == 8 else "dword"
-                    self.stacks[stack_id]["elements"].append({
+                    active_stack["elements"].append({
                         "size": size,
                         "type": token.token_type,
                         "operator": operator
                     })
                     asm.add_to_code_segment("mov", f"{operator} [{asm.get_register('si')}]", token.token_string)
                     asm.add_to_code_segment("add", asm.get_register("si"), size)
+                elif token.verify("operator", lang.PERCENTAGE):
+                    size = 8
+                    if asm.architecture == "x86": size = 4
+                    if not active_stack["elements"]:
+                        self.raise_exception(line_nb, self.StackEvaluation, "Empty stack, wanted an address.")
+                    if not active_stack["elements"][-1]["size"] != size:
+                        self.raise_exception(line_nb, self.StackEvaluation, "Wanted a valid address.")
+                    addr_operator = "qword" if size == 8 else "dword"
+                    target_size = 1
+                    target_operator = "byte"
+                    try: token.target
+                    except: pass
+                    else:
+                        target_size = token.target["size"]
+                        target_operator, target_size = lang.bytes_to_operator(target_size), lang.operator_to_bytes(lang.bytes_to_operator(target_size))
+                        target_type = token.target["type"]
+                    if free_size < target_size:
+                        self.raise_exception(line_nb, self.StackEvaluation, "Full stack.")
+                    active_stack.pop()
+                    active_stack.append({
+                        "size": target_size,
+                        "type": target_type,
+                        "operator": target_operator
+                    })
+                    asm.add_to_code_segment("sub", asm.get_register("si"), size)
+                    asm.add_to_code_segment("mov", asm.get_register("ax"), f"{addr_operator} [{asm.get_register("si")}]")
+                    asm.add_to_code_segment("mov", "al", f"{target_operator} [{asm.get_register("si")}]")
+                    asm.add_to_code_segment("mov", f"{target_operator} [{asm.get_register("si")}]", "al")
+                    asm.add_to_code_segment("add", asm.get_register("si"), target_size)
                 elif token.verify("operator", lang.PLUS):
-                    if len(self.stacks[stack_id]["elements"]) < 2:
+                    if len(active_stack["elements"]) < 2:
                         self.raise_exception(line_nb, self.StackEvaluation, "Addition operation need 2 numbers on the stack.")
-                    nb_b = self.stacks[stack_id]["elements"].pop()
-                    nb_a = self.stacks[stack_id]["elements"].pop()
+                    nb_b = active_stack["elements"].pop()
+                    nb_a = active_stack["elements"].pop()
                     asm.add_to_code_segment("sub", asm.get_register("si"), nb_b["size"])
                     asm.add_to_code_segment("movzx", asm.get_register("bx"), f"{nb_b['operator']} [{asm.get_register('si')}]")
                     asm.add_to_code_segment("sub", asm.get_register("si"), nb_a["size"])
@@ -165,7 +194,7 @@ class Compiler():
                         final_size = nb_b["size"]
                     asm.add_to_code_segment("mov", f"{final_op} [{asm.get_register('si')}]", "bl")
                     asm.add_to_code_segment("add", asm.get_register('si'), final_size)
-                    self.stacks[stack_id]["elements"].append({
+                    active_stack["elements"].append({
                         "size": final_size,
                         "type": "integer",
                         "operator": final_op
@@ -173,15 +202,28 @@ class Compiler():
                 else:
                     self.raise_exception(line_nb, self.StackEvaluation, "Other types not yet supported.")
 
-            return lang.Token("stack_" + stack_id, "address")
+            stack_token = lang.Token("stack_" + stack_id, "address")
+            stack_token.target = {
+                "size": stack_size,
+                "type": "address",
+                "operator": lang.bytes_to_operator(stack_size)
+            } # TODO: If the stack is more than 64 bytes
+            return stack_token
 
         for token in tokens:
             if token.verify("delimiter", lang.OPEN_HOOK):
+                size = 128
+                try: token.stack_size
+                except: pass
+                else: size = token.stack_size
+                if size < 1:
+                    self.raise_exception(line_nb, self.StackInitialization, "The stack must have at least 1 byte of size.")
                 if not block_started:
                     block_started = True
                     block["parent"] = "first"
+                    block["size"] = size
                 else:
-                    new_block = {"kind": "stack", "parent": active_block, "elements": []}
+                    new_block = {"kind": "stack", "parent": active_block, "size": size, "elements": []}
                     active_block["elements"].append(new_block)
                     active_block = new_block
             elif token.verify("delimiter", lang.CLOSED_HOOK):
@@ -219,7 +261,7 @@ class Compiler():
             self.raise_exception(line_nb, self.BlockDelimitation, "Unclosed block detected.")
         
         if block_started:
-            rtoken = evaluate_stack(block["elements"])
+            rtoken = evaluate_stack(block["elements"], block["size"])
         
         return rtoken
     
@@ -258,6 +300,9 @@ class Compiler():
                         self.raise_exception(line_nb, self.InvalidPreprocessorCommand, "Invalid memory identifier.")
 
                     mem_size = tokens[3]
+
+                    if int(mem_size.token_string) < 1:
+                        self.raise_exception(line_nb, self.InvalidPreprocessorCommand, "The memory must have at least 1 byte of size.")
 
                     self.memories[mem_id.token_string] = {
                         "size": int(mem_size.token_string),
@@ -366,7 +411,7 @@ class Compiler():
 
             if tokens[0].verify("delimiter", lang.OPEN_HOOK):
                 self.evaluate(tokens)
-            elif tokens[0].verify("name", "exit"):
+            elif tokens[0].verify("instruction", "exit"):
                 if not (lang.format_tokens("%n %dl", tokens, True) or lang.format_tokens("%n %i", tokens)):
                     self.raise_exception(line_nb, self.ExitInstruction, "Wanted an argument token : integer or address.")
                 result_token = self.evaluate(tokens[1:])
@@ -380,6 +425,50 @@ class Compiler():
                     asm.add_to_code_segment("mov", asm.get_register("di"), result_token.token_string)
                 asm.add_to_code_segment("syscall")
                 ended = True
+            elif tokens[0].verify("instruction", "ini"):
+                if not (lang.format_tokens("%in %t %n %o", tokens, True) or lang.format_tokens("%in %t %n")):
+                    self.raise_exception(line_nb, self.IniInstruction, "Bad tokens.")
+                vartype = tokens[1]
+                varname = tokens[2]
+                if not lang.is_a_lower_name(varname):
+                    self.raise_exception(line_nb, self.IniInstruction, "The variable name must be in lowercase.")
+                if varname in self.memories[actual_memory]["elements"].keys():
+                    self.raise_exception(line_nb, self.IniInstruction, "Variable already initialized.")
+                size = lang.TYPES_SIZES[vartype][0]
+                token_type = lang.TYPES_SIZES[vartype][1]
+                lenght = 1
+                try: vartype.lenght
+                except: pass
+                else: lenght = vartype.lenght
+                if lenght < 1:
+                    self.raise_exception(line_nb, self.IniInstruction, "The type lenght must be at least 1.")
+                used_size = lang.get_memory_used_size(self.memories[actual_memory])
+                free_size = self.memories[actual_memory]["size"] - used_size
+                if size * lenght < free_size:
+                    self.raise_exception(line_nb, self.IniInstruction, "Full memory.")
+                self.memories[actual_memory]["elements"][varname] = {
+                    "size": size,
+                    "lenght": lenght,
+                    "token_type": token_type,
+                    "type": vartype,
+                    "redirect": True
+                }
+                if len(tokens) > 2:
+                    if tokens[3].verify("operator", lang.EQUAL) or (tokens[3].verify("operator", lang.PERCENTAGE) and tokens[3].verify("operator", lang.EQUAL)):
+                        if tokens[3].verify("operator", lang.PERCENTAGE) and tokens[3].verify("operator", lang.EQUAL):
+                            self.memories[actual_memory]["redirect"] = False
+                            tokens.pop(3)
+                        value = self.evaluate(tokens[4:])
+                        asm.add_to_code_segment("mov", asm.get_register("si"), "mem_" + actual_memory)
+                        asm.add_to_code_segment("add", asm.get_register("si"), used_size)
+                        if self.memories[actual_memory]["redirect"]:
+                            ...
+                        else:
+                            self.mov_token_to_address(value)
+                    elif tokens[3].verify("operator", lang.PERCENTAGE):
+                        self.memories[actual_memory]["redirect"] = False
+                    else:
+                        self.raise_exception(line_nb, self.IniInstruction, "Invalid declaration.")
 
         for memory_id, memory in self.memories.items():
             memory_size = memory["size"]
@@ -391,6 +480,27 @@ class Compiler():
             asm.add_to_code_segment("syscall")
         
         self.running_programs.pop()
+    
+    def mov_token_to_address(self, token:lang.Token, operator:str=None, address_redirect:bool=False):
+        program = self.running_programs[-1]
+        line_nb = program["line"]
+        asm:fasm.Program = program["asm"]
+
+        if token.verify_type("integer"):
+            nb = int(token.token_string)
+            if operator is None:
+                size = lang.how_much_bytes(nb)
+                operator = lang.bytes_to_operator(size)
+            asm.add_to_code_segment("mov", f"{operator} [{asm.get_register('si')}]", nb)
+        # TODO: Do more token types.
+        elif token.verify_type("address"):
+            if address_redirect:
+                if operator is None:
+                    size = 8
+                    if asm.architecture == "x86": size = 4
+                    operator = "qword" if size == 8 else "dword"
+                asm.add_to_code_segment("mov", asm.get_register("si"), token.token_string)
+                asm.add_to_code_segment("movzx", asm.get_register("di"), f"byte [{asm.get_register('si')}]")
     
     def generate_assembly(self, filename:str, program:str=None):
         if not program: program = self.main_program

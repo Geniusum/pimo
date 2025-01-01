@@ -1,0 +1,4 @@
+#mem MAIN 512
+#acmem MAIN
+
+exit 32:[65]

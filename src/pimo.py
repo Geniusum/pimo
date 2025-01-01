@@ -161,13 +161,14 @@ class Main():
             self.logger.log(f"Changing mod due to the `-c` change mod option.", "info")
             self.execute_command(f"chmod +x {self.output}")
 
-        self.logger.log(f"Executing the output...", "work")
-        try: self.execute_command(f"./{self.output}")
-        except Exception as e:
-            self.error_logger.log(f"Exception during the output execution : {e}", "error")
-            self.end()
-        else:
-            self.logger.log(f"Output executed.", "success")
+        if self.execute:
+            self.logger.log(f"Executing the output...", "work")
+            try: self.execute_command(f"./{self.output}")
+            except Exception as e:
+                self.error_logger.log(f"Exception during the output execution : {e}", "error")
+                self.end()
+            else:
+                self.logger.log(f"Output executed.", "success")
 
     def end(self):
         if self.direct:

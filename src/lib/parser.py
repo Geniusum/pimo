@@ -5,8 +5,6 @@ import lib.lang as lang
 class Parser():
     class InvalidStringReference(BaseException): ...
     class NotUpperCaseMacroName(BaseException): ...
-    class NotLowerCaseRegister(BaseException): ...
-    class InvalidRegister(BaseException): ...
 
     def __init__(self, pimo_instance):
         self.strings = {}
@@ -125,6 +123,7 @@ class Parser():
                 token:lang.Token
                 next_part = utils.get_item_safe(parts, index + 1)
                 next_part_2 = utils.get_item_safe(parts, index + 2)
+                next_part_3 = utils.get_item_safe(parts, index + 3)
 
                 if part + next_part == lang.DOUBLE_SLASH:
                     break
@@ -147,14 +146,17 @@ class Parser():
                         self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.NotUpperCaseMacroName)
                     token = lang.Token(macro_name, "macro")
                     parts_to_skip = 1
-                elif part == lang.PERCENTAGE and lang.is_a_valid_name(next_part):
-                    register = next_part
-                    if not lang.is_a_lower_name(register):
-                        self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.NotLowerCaseRegister)
-                    if not register in ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]:
-                        self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.InvalidRegister)
+                elif part == lang.PERCENTAGE and lang.is_a_register(next_part):
                     token = lang.Token(lang.PERCENTAGE + next_part, "register")
                     parts_to_skip = 1
+                elif lang.is_a_type(part) and next_part == lang.LESS_THAN and lang.is_a_integer(next_part_2) and next_part_3 == lang.GREATER_THAN:
+                    token = lang.Token(part, "type")
+                    token.lenght = int(next_part_2)
+                    parts_to_skip = 3
+                elif lang.is_a_integer(part) and next_part == lang.COLON and next_part_2 == lang.OPEN_HOOK:
+                    token = lang.Token(lang.OPEN_HOOK, "delimiter")
+                    token.stack_size = int(part)
+                    parts_to_skip = 2
                 else:
                     token = lang.Token(part)
                 
