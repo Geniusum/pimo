@@ -1,6 +1,6 @@
 # The Pimo Programming Language
 
-![[assets/logo-2.png]]
+![Pimo Logo](assets/logo-2.png)
 
 ---
 
