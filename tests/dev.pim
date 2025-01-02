@@ -1,4 +1,6 @@
 #mem MAIN 512
 #acmem MAIN
 
-exit 32:[65]
+ini x64 exit_code = [78]
+
+exit exit_codes

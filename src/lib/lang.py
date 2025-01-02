@@ -32,7 +32,7 @@ STAR_SLASH = "*/"
 
 # Operators
 OPERATORS = [
-             HASHTAG, DOUBLE_HASHTAG, TILDE, PERCENTAGE, COLON, PERCENTAGE,
+             HASHTAG, DOUBLE_HASHTAG, TILDE, PERCENTAGE, COLON, PERCENTAGE, EQUAL,
              PLUS  # Stack operators
             ]
 
@@ -156,8 +156,6 @@ class Token():
             return "ppcommand"
         if is_a_boolean(self.token_string):
             return "boolean"
-        if is_a_valid_name(self.token_string):
-            return "name"
         if is_a_integer(self.token_string):
             return "integer"
         if is_a_decimal(self.token_string):
@@ -168,6 +166,12 @@ class Token():
             return "operator"
         if is_a_instruction(self.token_string):
             return "instruction"
+        if is_a_register(self.token_string):
+            return "register"
+        if is_a_type(self.token_string):
+            return "type"
+        if is_a_valid_name(self.token_string):
+            return "name"
         
         return "unknown"
 
@@ -216,7 +220,24 @@ def how_much_bytes(nb: int) -> int:
     num_bytes = (num_bits + 7) // 8
     return max(1, num_bytes)
 
-def get_stack_used_size(stack:dict) -> int:
+def how_much_bytes_decimal(nb: float) -> int:
+    try:
+        struct.pack('f', nb)
+        return 4
+    except OverflowError: return 8
+
+def int_to_bytes(nb: int) -> list[int]:
+    num_bytes = how_much_bytes(nb)
+    byte_array = nb.to_bytes(num_bytes, byteorder='big', signed=True)
+    return list(byte_array)
+
+def decimal_to_bytes(nb: float) -> list[int]:
+    num_bytes = how_much_bytes_decimal(nb)
+    if num_bytes == 4: byte_array = struct.pack('f', nb)
+    else: byte_array = struct.pack('d', nb)
+    return list(byte_array)
+
+"""def get_stack_used_size(stack:dict) -> int:
     used_size = 0
     for element in stack["elements"]:
         used_size += element["size"]
@@ -226,15 +247,9 @@ def get_memory_used_size(memory:dict) -> int:
     used_size = 0
     for element in memory["elements"].values():
         used_size += element["size"] * element["lenght"]
-    return used_size
+    return used_size"""
 
-def how_much_bytes_decimal(nb: float) -> int:
-    try:
-        struct.pack('f', nb)
-        return 4
-    except OverflowError: return 8
-
-def bytes_to_operator(size:int):
+"""def bytes_to_operator(size:int):
     if size == 1: operator = "byte"
     elif size == 2: operator = "word"
     elif size <= 4: operator = "dword"
@@ -245,8 +260,8 @@ def bytes_to_operator(size:int):
     elif size <= 32: operator = "qqword"
     elif size <= 64: operator = "dqqword"
     else:
-        return None, None
-    return operator,
+        return None
+    return operator
 
 def operator_to_bytes(operator:str):
     op = {
@@ -255,4 +270,4 @@ def operator_to_bytes(operator:str):
     }
     try:
         return op[operator]
-    except: return None
+    except: return None"""

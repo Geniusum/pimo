@@ -1,5 +1,7 @@
 # The FASM Python API
 
+from lib.lang import REGISTERS
+
 class CodePart():
     def __init__(self):
         self.fm: str
@@ -72,7 +74,7 @@ class Program():
 
     def __add_to_code_segment(self, instruction: str):
         """Adds an instruction to the code segment."""
-        return self.code_segment.add_instruction(self.pass_to_indent(instruction))
+        return self.code_segment.add_instruction(self.format_registers(self.pass_to_indent(instruction)))
 
     def add_to_code_segment(self, instruction:str, *args:list[str]):
         return self.__add_to_code_segment(" ".join([instruction.strip().lower(), ", ".join(self.args_to_string(args))]))
@@ -85,6 +87,11 @@ class Program():
         """Saves the generated FASM source code to a file."""
         with open(filename, "w") as f:
             f.write(self.generate_source())
+    
+    def format_registers(self, s: str) -> str:
+        for register in REGISTERS:
+            s.replace(f"%{register}", self.register_prefix + register)
+        return s
 
 # Testing
 """if __name__ == "__main__":

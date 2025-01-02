@@ -3,6 +3,8 @@ import sys, argparse, os, time, subprocess
 SCRIPT = os.path.abspath(__file__)
 SRC_DIR = os.path.dirname(SCRIPT)
 LIB_DIR = os.path.join(SRC_DIR, "lib")
+PIMO_DIR = os.path.dirname(SRC_DIR)
+FASM_PATH = os.path.relpath(os.path.join(PIMO_DIR, "fasm"))
 
 sys.path += [SRC_DIR, LIB_DIR]
 
@@ -149,7 +151,7 @@ class Main():
         self.logger.log(f"The file `{self.assembly_output}` now contains the assembly code.", "success")
 
         self.logger.log(f"Creating binary from the file `{self.assembly_output}` with FASM.", "work")
-        try: self.execute_command(f"fasm \"{self.assembly_output}\" \"{self.output}\"")
+        try: self.execute_command(f"./{FASM_PATH} \"{self.assembly_output}\" \"{self.output}\"")
         except: pass
         if os.path.exists(self.output):
             self.logger.log(f"Binary generated at the path `{self.output}`.", "success")
