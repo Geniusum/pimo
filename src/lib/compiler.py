@@ -125,50 +125,50 @@ class Compiler():
                 bool = 0
                 if token.token_string.lower() == "true": bool = 1
                 self.add_boolean(bool)
-            elif token.verify_type("address"): # TODO: Not do that, because the operator % do that
-                size = 8
-                if asm.architecture == "x86": size = 4
-                if not acstack.enough_size(size):
-                    self.raise_exception(line_nb, self.StackEvaluation, "Full stack.")
-                try: token.size
-                except: pass
-                else: size = token.size
-                if not size in [4, 8]:
-                    self.raise_exception(line_nb, self.StackEvaluation, "Only x86 and x64 addresses accepted.")
-                operator = "qword" if size == 8 else "dword"
-                token_type = token.token_type
-                element = acstack.push(size, token_type)
-                asm.add_to_code_segment("mov", f"{operator} [{asm.get_register('si')}]", token.token_string)
-                asm.add_to_code_segment("add", asm.get_register("si"), element.size)
-            elif token.verify("operator", lang.PERCENTAGE):
-                size = 8
-                if asm.architecture == "x86": size = 4
-                if not acstack["elements"]:
-                    self.raise_exception(line_nb, self.StackEvaluation, "Empty stack, wanted an address.")
-                if not acstack["elements"][-1]["size"] != size:
-                    self.raise_exception(line_nb, self.StackEvaluation, "Wanted a valid address.")
-                addr_operator = "qword" if size == 8 else "dword"
-                target_size = 1
-                target_operator = "byte"
-                try: token.target
-                except: pass
-                else:
-                    target_size = token.target["size"]
-                    target_operator, target_size = lang.bytes_to_operator(target_size), lang.operator_to_bytes(lang.bytes_to_operator(target_size))
-                    target_type = token.target["type"]
-                if free_size < target_size:
-                    self.raise_exception(line_nb, self.StackEvaluation, "Full stack.")
-                acstack.pop()
-                acstack.append({
-                    "size": target_size,
-                    "type": target_type,
-                    "operator": target_operator
-                })
-                asm.add_to_code_segment("sub", asm.get_register("si"), size)
-                asm.add_to_code_segment("mov", asm.get_register("ax"), f"{addr_operator} [{asm.get_register('si')}]")
-                asm.add_to_code_segment("mov", "al", f"{target_operator} [{asm.get_register('si')}]")
-                asm.add_to_code_segment("mov", f"{target_operator} [{asm.get_register('si')}]", "al")
-                asm.add_to_code_segment("add", asm.get_register("si"), target_size)
+                """elif token.verify_type("address"): # TODO: Not do that, because the operator % do that
+                    size = 8
+                    if asm.architecture == "x86": size = 4
+                    if not acstack.enough_size(size):
+                        self.raise_exception(line_nb, self.StackEvaluation, "Full stack.")
+                    try: token.size
+                    except: pass
+                    else: size = token.size
+                    if not size in [4, 8]:
+                        self.raise_exception(line_nb, self.StackEvaluation, "Only x86 and x64 addresses accepted.")
+                    operator = "qword" if size == 8 else "dword"
+                    token_type = token.token_type
+                    element = acstack.push(size, token_type)
+                    asm.add_to_code_segment("mov", f"{operator} [{asm.get_register('si')}]", token.token_string)
+                    asm.add_to_code_segment("add", asm.get_register("si"), element.size)
+                elif token.verify("operator", lang.PERCENTAGE):
+                    size = 8
+                    if asm.architecture == "x86": size = 4
+                    if not acstack["elements"]:
+                        self.raise_exception(line_nb, self.StackEvaluation, "Empty stack, wanted an address.")
+                    if not acstack["elements"][-1]["size"] != size:
+                        self.raise_exception(line_nb, self.StackEvaluation, "Wanted a valid address.")
+                    addr_operator = "qword" if size == 8 else "dword"
+                    target_size = 1
+                    target_operator = "byte"
+                    try: token.target
+                    except: pass
+                    else:
+                        target_size = token.target["size"]
+                        target_operator, target_size = lang.bytes_to_operator(target_size), lang.operator_to_bytes(lang.bytes_to_operator(target_size))
+                        target_type = token.target["type"]
+                    if free_size < target_size:
+                        self.raise_exception(line_nb, self.StackEvaluation, "Full stack.")
+                    acstack.pop()
+                    acstack.append({
+                        "size": target_size,
+                        "type": target_type,
+                        "operator": target_operator
+                    })
+                    asm.add_to_code_segment("sub", asm.get_register("si"), size)
+                    asm.add_to_code_segment("mov", asm.get_register("ax"), f"{addr_operator} [{asm.get_register('si')}]")
+                    asm.add_to_code_segment("mov", "al", f"{target_operator} [{asm.get_register('si')}]")
+                    asm.add_to_code_segment("mov", f"{target_operator} [{asm.get_register('si')}]", "al")
+                    asm.add_to_code_segment("add", asm.get_register("si"), target_size)"""
             elif token.verify("operator", lang.PLUS):
                 if len(acstack["elements"]) < 2:
                     self.raise_exception(line_nb, self.StackEvaluation, "Addition operation need 2 numbers on the stack.")
