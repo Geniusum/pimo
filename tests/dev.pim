@@ -1,6 +1,6 @@
-#mem MAIN 512
-#acmem MAIN
+#mem ~ 512
+#acmem ~
 
-ini x64 exit_code = [78]
+ini u8 x = [4]
 
-exit exit_codes
+exit [x 1 +]

@@ -26,11 +26,23 @@ class Stack():
     def pop(self):
         return self.elements.pop()
     
+    def get_used_bytes(self) -> list[StackByte]:
+        used_bytes = []
+        for element in self.elements: used_bytes += element.bytes
+        return used_bytes
+    
     def get_used_positions(self) -> list[int]:
         used_positions = []
         used_bytes = self.get_used_bytes()
         for byte in used_bytes: used_positions.append(byte.position)
         return used_positions
+
+    def get_free_bytes(self) -> list[StackByte]:
+        free_bytes = []
+        used_positions = self.get_used_positions()
+        for byte_position in range(self.size):
+            if not byte_position in used_positions: free_bytes.append(StackByte(byte_position))
+        return free_bytes
     
     def get_free_positions(self) -> list[int]:
         free_positions = []

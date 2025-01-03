@@ -57,6 +57,10 @@ class Memory():
         for element in self.elements: names.append(element.name)
         return names
 
+    def get_element(self, name:str) -> MemoryElement:
+        for element in self.elements:
+            if element.name == name: return element
+
     def name_exists(self, name:str) -> bool:
         return name in self.get_names()
     

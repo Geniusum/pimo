@@ -78,6 +78,9 @@ class Program():
 
     def add_to_code_segment(self, instruction:str, *args:list[str]):
         return self.__add_to_code_segment(" ".join([instruction.strip().lower(), ", ".join(self.args_to_string(args))]))
+    
+    def comment_code(self, comment:str):
+        return self.__add_to_code_segment(f"; {comment}")
 
     def generate_source(self) -> str:
         """Generates the full FASM source code."""
@@ -90,7 +93,7 @@ class Program():
     
     def format_registers(self, s: str) -> str:
         for register in REGISTERS:
-            s.replace(f"%{register}", self.register_prefix + register)
+            s = s.replace(f"%{register}", self.register_prefix + register)
         return s
 
 # Testing
