@@ -211,7 +211,8 @@ class Compiler():
                 #     asm.add_to_code_segment("mov", "al", "byte [%di]")
                 #     asm.add_to_code_segment("mov", "byte [%si]", "al")
                 #     asm.add_to_code_segment("add", "%si", 1)
-                asm.add_to_code_segment("mov", "byte [%si]", "bl")
+                asm.add_to_code_segment("mov", "byte [%si]", "bl")  # Need to support other size
+                asm.add_to_code_segment("add", "%si", 1)  # TODO : Change
                 acstack.push(final_size, "integer")
             elif token.verify_type("name") or token.verify("operator", lang.TILDE):
                 if lang.is_a_lower_name(token.token_string):

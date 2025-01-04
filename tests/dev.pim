@@ -1,4 +1,6 @@
 #mem ~ 512
 #acmem ~
 
-exit [4 3 + 5 +]
+ini u8 x = [4]
+
+exit [x x + 4 8 + +]  // Exit code 20
