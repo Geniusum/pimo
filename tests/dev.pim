@@ -3,4 +3,4 @@
 
 ini u8 x = [4]
 
-exit [x 1 +]
+exit [x x + 4 +]
