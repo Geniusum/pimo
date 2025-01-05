@@ -1,5 +1,6 @@
 from lib.enum import *
 import struct
+import lib.utils as utils 
 
 #########################
 #  LEXICAL DEFINITIONS  #
@@ -19,6 +20,7 @@ LESS_THAN = "<"
 GREATER_THAN = ">"
 PARAGRAPH = "§"
 SEMICOLON = ";"
+COMMA = ","
 PERCENTAGE = "%"
 COLON = ":"
 EQUAL = "="
@@ -37,7 +39,7 @@ OPERATORS = [
             ]
 
 # Delimiters
-DELIMITERS = [SEMICOLON, OPEN_HOOK, CLOSED_HOOK]
+DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSED_HOOK]
 
 # Registers
 REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
@@ -77,7 +79,7 @@ PPCommands = { # Pre-processor commands
     "define", "mem", "acmem"
 }
 PPOSCommands = { # Pre-processor only static commands
-    "mem"
+    "mem", "define"
 }
 L_PPCommands = list(PPCommands)
 L_PPOSCommands = list(PPOSCommands)
@@ -184,6 +186,15 @@ class Token():
     def verify_type(self, presumed_type:str):
         return presumed_type.lower() == self.token_type.lower()
 
+class Block():
+    def __init__(self, kind:str, parent:any=None, start_token:Token=None):
+        self.kind = kind
+        self.parent:Block = parent
+        self.start_token:Token = start_token
+        self.elements:list[Token, Block] = []
+    
+    def __str__(self):
+        return f"Block: of kind '{self.kind}' from [{self.start_token}] with :\n{utils.dump(self.elements)}"
 
 ###################
 #  OTHER METHODS  #
@@ -271,3 +282,29 @@ def operator_to_bytes(operator:str):
     try:
         return op[operator.lower()]
     except: return None
+
+def split_tokens(blocks:list, token_type:str=None, token_string:str=None) -> list[list[Token, Block]]:
+    groups = [[]]
+    for element in blocks:
+        if not isinstance(element, Block):
+            if token_string is None and not token_type is None:
+                if element.verify_type(token_type): groups.append([])
+                else: groups[-1].append(element)
+            else:
+                if element.verify(token_type, token_string): groups.append([])
+                else: groups[-1].append(element)
+        else:
+            groups[-1].append(element)
+    if groups == [[]]: groups = []
+    return groups
+
+def is_a_stack(token:any) -> bool:
+    return isinstance(token, Block) and token.kind == "stack"
+
+def is_a_token(token:any) -> bool:
+    return isinstance(token, Token)
+
+def are_tokens(tokens:list) -> bool:
+    for token in tokens:
+        if not is_a_token(token): return False
+    return True

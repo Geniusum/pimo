@@ -5,6 +5,7 @@ import lib.lang as lang
 class Parser():
     class InvalidStringReference(BaseException): ...
     class NotUpperCaseMacroName(BaseException): ...
+    class BlockDelimitation(BaseException): ...
 
     def __init__(self, pimo_instance):
         self.strings = {}
@@ -80,6 +81,9 @@ class Parser():
     
     def raise_sourcecode_exception(self, line_content:str, line:int, column:int, exception:BaseException):
         self.pimo_instance.raise_exception(exception, f"Line {line}", line_content.strip(), f"{' ' * column}^")
+    
+    def raise_exception(self, line:int, exception:BaseException, *args):
+        self.pimo_instance.raise_exception(exception, f"Line {line}", *args)
 
     def parse(self, content:str):
         segments = []
@@ -165,3 +169,33 @@ class Parser():
             segments[-1].pop("parts")
 
         return segments
+
+    def parse_blocks(self, segments:str):
+        root = lang.Block("root")
+        active_block = root
+        
+        for line_index, line in enumerate(segments):
+            line_nb = line["line"]
+
+            tokens:list[lang.Token] = line["tokens"]
+
+            if not tokens: continue
+
+            if tokens[0].verify("operator", lang.HASHTAG): continue
+
+            for token_index, token in enumerate(tokens):
+                if token.verify("delimiter", lang.OPEN_HOOK):
+                    stack_block = lang.Block("stack", active_block, token)
+                    active_block.elements.append(stack_block)
+                    active_block = stack_block
+                elif token.verify("delimiter", lang.CLOSED_HOOK):
+                    if active_block == root:
+                        self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-existant block.")
+                    
+                    active_block = active_block.parent
+                else:
+                    token.line = line_nb
+                    token.parent_block = active_block
+                    active_block.elements.append(token)
+        
+        return root.elements

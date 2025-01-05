@@ -1,8 +1,6 @@
 #mem ~ 512
 #acmem ~
 
-exit [1 2 +]
+ini u8 var = 6;
 
-// ini u8 x = [4]
-
-// exit [x x + 4 8 + +]  // Exit code 20
+exit var;

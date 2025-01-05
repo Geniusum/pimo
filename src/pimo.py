@@ -86,6 +86,11 @@ class Main():
         to_show = f"Parsed segments:\n\n{utils.dump(segments)}"
 
         self.logger.log(f"\n{self.logger.start}    ↳ ".join(to_show.splitlines()), "out")
+    
+    def show_parsed_blocks(self, blocks:list):
+        to_show = f"Parsed blocks:\n\n{utils.dump(blocks)}"
+
+        self.logger.log(f"\n{self.logger.start}    ↳ ".join(to_show.splitlines()), "out")
 
     def start(self):
         # Logger and ErrorLogger testing :
@@ -137,13 +142,15 @@ class Main():
 
         self.logger.log("Starting parsing...", "work")
         self.segments = self.parser.parse(self.sourcecode.content)
+        self.blocks = self.parser.parse_blocks(self.segments)
         self.logger.log("Parsed.", "success")
 
         if self.parsed:
             self.show_parsed(self.segments)
+            self.show_parsed_blocks(self.blocks)
         
         self.logger.log("Starting compiling...", "work")
-        self.compiler.compile(self.segments)
+        self.compiler.compile(self.segments, self.blocks)
         self.logger.log("Compiled.", "success")
 
         self.logger.log("Generating assembly and saving the file...", "work")

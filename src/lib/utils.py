@@ -7,22 +7,23 @@ def name(object:any) -> str:
 
 def dump(iterable, indent:int=0):
     buffer = ""
+    d = f"\n{indentation * (indent + 1)}"
     if isinstance(iterable, list):
         for index, item in enumerate(iterable):
             if type(item) in [list, dict]:
                 buffer += f"{indentation * indent}#{index} {type(item)} :\n"
                 buffer += dump(item, indent + 1)
             else:
-                buffer += f"{indentation * indent}#{index} {type(item)} {item}\n"
+                buffer += f"{indentation * indent}#{index} {type(item)} {d.join(str(item).splitlines())}\n"
     elif isinstance(iterable, dict):
         for key, item in iterable.items():
             if type(item) in [list, dict]:
                 buffer += f"{indentation * indent}{type(item)} {key}:\n"
                 buffer += dump(item, indent + 1)
             else:
-                buffer += f"{indentation * indent}{type(item)} {key}: {item}\n"
+                buffer += f"{indentation * indent}{type(item)} {key}: {d.join(str(item).splitlines())}\n"
     else:
-        buffer += f"{indentation * indent}{type(iterable)} {iterable}\n"
+        buffer += f"{indentation * indent}{type(iterable)} {d.join(str(iterable).splitlines())}\n"
     return buffer
 
 def get_item_safe(list:list, index:int):
