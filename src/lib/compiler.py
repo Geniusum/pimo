@@ -178,6 +178,8 @@ class Compiler():
                     self.raise_exception(line_nb, self.StackEvaluation, "Addition operation need 2 numbers on the stack.")
                 nb_b = acstack.pop()
                 nb_a = acstack.pop()
+                nb_b_operator = lang.bytes_to_operator(nb_a.size)
+                nb_a_operator = lang.bytes_to_operator(nb_b.size) # TODO : Use operators
                 rsize = 8
                 if asm.architecture == "x86": rsize = 4
                 if nb_b.size > rsize or nb_a.size > rsize:
@@ -192,17 +194,36 @@ class Compiler():
                     asm.add_to_code_segment("mov", "byte [%di]", "al")
                     asm.add_to_code_segment("add", "%di", 1)"""
                 asm.add_to_code_segment("sub", "%si", len(nb_b.bytes))
-                asm.add_to_code_segment("movzx", "%bx", "byte [%si]")
+                for byte_index, byte in enumerate(nb_b.bytes):
+                    if byte_index: asm.add_to_code_segment("mov", "al", f"byte [%si + {byte_index}]")
+                    else: asm.add_to_code_segment("mov", "al", "byte [%si]")
+                    if byte_index: asm.add_to_code_segment("mov", f"byte [%bx + {byte_index}]", "al")
+                    else: asm.add_to_code_segment("mov", f"byte [%bx]", "al")
+                for byte_index in reversed(range(rsize - len(nb_b.bytes))):
+                    byte_index = rsize - byte_index - 1
+                    if byte_index: asm.add_to_code_segment("mov", f"byte [%bx + {byte_index}]", 0)
+                    else: asm.add_to_code_segment("mov", f"byte [%bx]", 0)
+                asm.add_to_code_segment("sub", "%si", len(nb_a.bytes))
+                for byte_index, byte in enumerate(nb_a.bytes):
+                    if byte_index: asm.add_to_code_segment("mov", "al", f"byte [%si + {byte_index}]")
+                    else: asm.add_to_code_segment("mov", "al", "byte [%si]")
+                    if byte_index: asm.add_to_code_segment("mov", f"byte [%cx + {byte_index}]", "al")
+                    else: asm.add_to_code_segment("mov", f"byte [%cx]", "al")
+                for byte_index in reversed(range(rsize - len(nb_b.bytes))):
+                    byte_index = rsize - byte_index - 1
+                    if byte_index: asm.add_to_code_segment("mov", f"byte [%cx + {byte_index}]", 0)
+                    else: asm.add_to_code_segment("mov", f"byte [%cx]", 0)
+                # asm.add_to_code_segment("movzx", "%bx", "byte [%si]")
                 """asm.add_to_code_segment("mov", "%di", "%cx")
                 for byte_index, byte in enumerate(nb_b.bytes):
                     asm.add_to_code_segment("sub", "%si", 1)
                     asm.add_to_code_segment("mov", "al", "byte [%si]")
                     asm.add_to_code_segment("mov", "byte [%di]", "al")
                     asm.add_to_code_segment("add", "%di", 1)"""
-                asm.add_to_code_segment("sub", "%si", len(nb_b.bytes))
-                asm.add_to_code_segment("movzx", "%cx", "byte [%si]")
+                # asm.add_to_code_segment("sub", "%si", len(nb_b.bytes))
+                # asm.add_to_code_segment("movzx", "%cx", "byte [%si]")
                 asm.add_to_code_segment("add", "%bx", "%cx")
-                if nb_a.size >= nb_b.size: # TODO: Find an other way
+                if nb_a.size >= nb_b.size:  # TODO: Find an other way
                     final_size = nb_a.size
                 else:
                     final_size = nb_b.size
@@ -211,9 +232,15 @@ class Compiler():
                 #     asm.add_to_code_segment("mov", "al", "byte [%di]")
                 #     asm.add_to_code_segment("mov", "byte [%si]", "al")
                 #     asm.add_to_code_segment("add", "%si", 1)
-                asm.add_to_code_segment("mov", "byte [%si]", "bl")  # Need to support other size
-                asm.add_to_code_segment("add", "%si", 1)  # TODO : Change
+                for byte_index in range(final_size):
+                    if byte_index: asm.add_to_code_segment("mov", "al", f"byte [%bx + {byte_index}]")
+                    else: asm.add_to_code_segment("mov", "al", "byte [%bx]")
+                    asm.add_to_code_segment("mov", "byte [%si]", "al")
+                    asm.add_to_code_segment("add", "%si", 1)
+                # asm.add_to_code_segment("mov", "%si", "%bx")  # Need to support other size
+                # asm.add_to_code_segment("add", "%si", final_size)  # TODO : Change
                 acstack.push(final_size, "integer")
+                asm.comment_code("End add stack operator")
             elif token.verify_type("name") or token.verify("operator", lang.TILDE):
                 if lang.is_a_lower_name(token.token_string):
                     varname = token.token_string

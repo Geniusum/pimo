@@ -249,7 +249,7 @@ def get_memory_used_size(memory:dict) -> int:
         used_size += element["size"] * element["lenght"]
     return used_size"""
 
-"""def bytes_to_operator(size:int):
+def bytes_to_operator(size:int):
     if size == 1: operator = "byte"
     elif size == 2: operator = "word"
     elif size <= 4: operator = "dword"
@@ -269,5 +269,5 @@ def operator_to_bytes(operator:str):
         "tword": 10, "dqword": 16, "qqword": 32, "dqqword": 64
     }
     try:
-        return op[operator]
-    except: return None"""
+        return op[operator.lower()]
+    except: return None
