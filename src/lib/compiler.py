@@ -539,22 +539,18 @@ class Compiler():
                         varelement:memory.MemoryElement = self.memories[program["acmem"]].get_element(varname)
                         if varelement.token_type != "integer":
                             self.raise_exception(line_nb, self.ExitInstruction, "Wanted an unsigned integer.")
-                        rsize = 8
-                        if asm.architecture == "x86": rsize = 4
-                        if varelement.size > rsize:
-                            self.raise_exception(line_nb, self.ExitInstruction, "Exit code supports at maximum 8 bytes of size.")
+                        if varelement.size != 1:
+                            self.raise_exception(line_nb, self.ExitInstruction, "Exit code are 1 byte unsigned integer.")
                         
-                        for byte_index, byte in enumerate(varelement.bytes):
-                            byte_position = byte.position
+                        asm.add_to_code_segment("xor", "rdi", "rdi")
 
-                            asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())
-                            if byte_position: asm.add_to_code_segment("add", "%si", byte_position)
-                            if byte_index:
-                                asm.add_to_code_segment("mov", "al", f"byte [%si + {byte_index}]")
-                                asm.add_to_code_segment("mov", f"byte [%di + {byte_index}]", "al")
-                            else:
-                                asm.add_to_code_segment("mov", "al", f"byte [%si]")
-                                asm.add_to_code_segment("mov", f"byte [%di]", "al")
+                        byte = varelement.bytes[0]
+                        byte_position = byte.position
+
+                        asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())
+                        if byte_position: asm.add_to_code_segment("add", "%si", byte_position)
+                        asm.add_to_code_segment("mov", "bl", "byte [%si]")
+                        asm.add_to_code_segment("movzx", "%di", "bl")
                     elif lang.is_a_upper_name(varname):
                         self.raise_exception(line_nb, self.ExitInstruction, "Memory not supported here.")
                     else:

@@ -1,6 +1,6 @@
 #mem ~ 512
 #acmem ~
 
-ini u8 var = 6;
+ini u8 exit_code = 128; // TODO: Correct this error
 
-exit var;
+exit exit_code;
