@@ -33,14 +33,14 @@ class Memory():
         for byte in used_bytes: used_positions.append(byte.position)
         return used_positions
 
-    def get_free_bytes(self) -> list[MemoryByte]:
+    def get_free_bytes(self) -> list[MemoryByte]: # TODO: Set a limit
         free_bytes = []
         used_positions = self.get_used_positions()
         for byte_position in range(self.size):
             if not byte_position in used_positions: free_bytes.append(MemoryByte(byte_position))
         return free_bytes
     
-    def get_free_positions(self) -> list[int]:
+    def get_free_positions(self) -> list[int]: # TODO: Set a limit
         free_positions = []
         free_bytes = self.get_free_bytes()
         for byte in free_bytes: free_positions.append(byte.position)

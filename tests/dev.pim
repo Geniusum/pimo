@@ -1,6 +1,10 @@
 #mem ~ 512
 #acmem ~
 
-ini u8 exit_code = 128; // TODO: Correct this error
+// ini u8 exit_code = 128; // TODO: Correct this error
 
-exit exit_code;
+ini u8 x = 5;
+ini x64 y % = [x];
+x = 7;
+
+exit [y %];

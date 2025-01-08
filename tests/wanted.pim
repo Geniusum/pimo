@@ -1,0 +1,22 @@
+#mem ~ 512
+#acmem ~
+
+ini u8 x;
+
+// Names :
+
+x ;  // Basic notation
+~::x ;  // Memory selection notation
+
+func u8 print_x() {
+	// Functions have their proper memory, by default of 512 bytes
+	// The actual memory is changed only for the function
+	// For change the size to 2048 for example, we need to do :
+	// func u8 print_x() 2048 { ...
+	~::x ;  // For get the x variable from the program memory
+	~~::x ; // For get the x variable from the function memory
+	import x from ~;  // For import an extern variable to the actual memory
+	ini u8 y;
+	export y to ~;  // For export an intern variable to the selected memory
+	write uint_to_str(x);
+}

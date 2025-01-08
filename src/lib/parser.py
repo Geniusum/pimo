@@ -161,6 +161,10 @@ class Parser():
                     token = lang.Token(lang.OPEN_HOOK, "delimiter")
                     token.stack_size = int(part)
                     parts_to_skip = 2
+                elif lang.is_a_valid_name(part) and lang.is_a_upper_name(part) and next_part + next_part_2 == lang.DOUBLE_COLON and lang.is_a_valid_name(next_part_3) and lang.is_a_lower_name(next_part_3):
+                    token = lang.Token(next_part_3, "name")
+                    token.memory = part
+                    parts_to_skip = 3
                 else:
                     token = lang.Token(part)
                 

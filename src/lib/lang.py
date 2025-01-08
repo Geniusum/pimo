@@ -31,6 +31,7 @@ DOUBLE_HASHTAG = "##"
 DOUBLE_SLASH = "//"
 SLASH_STAR = "/*"
 STAR_SLASH = "*/"
+DOUBLE_COLON = "::"
 
 # Operators
 OPERATORS = [
