@@ -3,8 +3,12 @@
 
 // ini u8 exit_code = 128; // TODO: Correct this error
 
-ini u8 x = 5;
-ini x64 y % = [x];
-x = 7;
+// ini u8 x = 5;
+// ini x64 y % = [x];
+// x = 7;
 
-exit [y %];
+// write [[2]]
+// exit [[2] %];
+
+ini str<90> x = "Hello, World!" ;
+write ["Hello, World!"];

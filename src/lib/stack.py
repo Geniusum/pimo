@@ -20,7 +20,7 @@ class Stack():
     def push(self, *args):
         self.elements.append(StackElement(*args))
         for i in range(self.elements[-1].size):
-            self.elements[-1].bytes.append(StackByte(self.get_free_positions()[-1]))
+            self.elements[-1].bytes.append(StackByte(self.get_free_positions()[0]))
         return self.elements[-1]
 
     def pop(self):

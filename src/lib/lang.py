@@ -46,7 +46,7 @@ DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSED_HOOK]
 REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
 
 # Instructions
-INSTRUCTIONS = ["exit", "ini"]
+INSTRUCTIONS = ["exit", "write", "ini"]
 
 # Types
 TYPES_SIZES = {
@@ -60,7 +60,9 @@ TYPES_SIZES = {
     "f32": [4, "decimal"],
     "f64": [8, "decimal"],
     "x86": [4, "address"],
-    "x64": [8, "address"]
+    "x64": [8, "address"],
+    "addr": [8, "address"],
+    "str": [1, "string"]
 }
 TYPES = list(TYPES_SIZES.keys())
 

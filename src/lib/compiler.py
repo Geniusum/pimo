@@ -16,6 +16,7 @@ class Compiler():
     class StackEvaluation(BaseException): ...
     class StackInitialization(BaseException): ...
     class ExitInstruction(BaseException): ...
+    class WriteInstruction(BaseException): ...
     class IniInstruction(BaseException): ...
     class TokenToAddress(BaseException): ...
     class InstructionReading(BaseException): ...
@@ -111,9 +112,9 @@ class Compiler():
     def evaluate_stack(self, block:lang.Block) -> lang.Token:
         stack_id = self.generate_id()
         stack_size = 128
-        try: block.start_token.size
+        try: block.start_token.stack_size
         except: pass
-        else: stack_size = block.start_token.size
+        else: stack_size = block.start_token.stack_size
         self.stacks.append(stack.Stack(stack_size, stack_id))
         program = self.running_programs[-1]
         program["acstack"] = self.stacks[-1]
@@ -125,7 +126,7 @@ class Compiler():
         elements = block.elements
         
         for token in elements:
-            if isinstance(token, lang.Block): token = self.evaluate_stack(token)
+            if lang.is_a_stack(token): token = self.evaluate_stack(token)
             if not token: continue
             if token.verify_type("integer"):
                 nb = int(token.token_string)
@@ -157,7 +158,7 @@ class Compiler():
                     if asm.architecture == "x86": size = 4
                     if not acstack["elements"]:
                         self.raise_exception(line_nb, self.StackEvaluation, "Empty stack, wanted an address.")
-                    if not acstack["elements"][-1]["size"] != size:
+                    if not acstack["elements"][-1]["size"] == size:
                         self.raise_exception(line_nb, self.StackEvaluation, "Wanted a valid address.")
                     addr_operator = "qword" if size == 8 else "dword"
                     target_size = 1
@@ -261,7 +262,31 @@ class Compiler():
 
                 acstack.push(rsize, "integer")
                 asm.comment_code("End add stack operator")
-            elif token.verify("operator", lang.PERCENTAGE): ... # TODO
+            elif token.verify("operator", lang.PERCENTAGE):
+                print(acstack.get_used_positions())
+                addr_size = 8
+                if asm.architecture == "x86": addr_size = 4
+                if not acstack.elements:
+                    self.raise_exception(line_nb, self.StackEvaluation, "Empty stack.")
+                addr = acstack.pop()
+                if addr.size != addr_size:
+                    self.raise_exception(line_nb, self.StackEvaluation, "Wanted an address.")
+                addr_operator = lang.bytes_to_operator(addr_size)
+                target_size = 1
+                try: token.size
+                except: pass
+                else: target_size = token.size
+                if target_size < 1:
+                    self.raise_exception(line_nb, self.StackEvaluation, "The target size must be at least of 1 byte of size.")
+                asm.add_to_code_segment("sub", "%si", addr_size)
+                asm.add_to_code_segment("mov", "%di", f"{addr_operator} [%si]")
+                for i in range(target_size): # TODO: Make a placement operator for alligned allocation, TODO: Make a loop instead
+                    asm.add_to_code_segment("mov", "al", "byte [%di]")
+                    asm.add_to_code_segment("mov", "byte [%si]", "al")
+                    asm.add_to_code_segment("add", "%si", 1)
+                    asm.add_to_code_segment("add", "%di", 1)
+                acstack.push(target_size, "integer")
+                print(acstack.get_used_positions())
             elif token.verify_type("name") or token.verify("operator", lang.TILDE):
                 if token.verify("operator", lang.TILDE):
                     token = lang.Token(self.memories[program["acmem"]].with_prefix(), "name")
@@ -282,14 +307,24 @@ class Compiler():
                     asm.add_to_code_segment("mov", f"{roperator} [%si]", unit.with_prefix())
                     asm.add_to_code_segment("add", "%si", rsize)
                     acstack.push(rsize, token.token_type)
+            elif token.verify_type("address"):
+                rsize = 8
+                if asm.architecture == "x86": rsize = 4
+                roperator = lang.bytes_to_operator(rsize)
+                asm.add_to_code_segment("mov", f"{roperator} [%si]", token.token_string)
+                asm.add_to_code_segment("add", "%si", rsize)
+                acstack.push(rsize, token.token_type)
+            elif token.verify_type("string"):
+                chars = [*token.token_string]
+                for char in chars:
+                    asm.add_to_code_segment("mov", "byte [%si]", min(max(0, ord(char)), 255))
+                    asm.add_to_code_segment("add", "%si", 1)
+                    acstack.push(1, "string")
             else:
                 self.raise_exception(line_nb, self.StackEvaluation, "Other types not yet supported.")
 
-        stack_token = lang.Token("stack_" + stack_id, "address")
-        stack_token.target = {
-            "size": stack_size,
-            "type": "address"
-        } # TODO: If the stack is more than 64 bytes  # TODO: Check if it's util
+        stack_token = lang.Token(acstack.with_prefix(), "address")
+        stack_token.size = stack_size
         return stack_token
     
     # Deprecated, TODO : Delete this
@@ -564,6 +599,34 @@ class Compiler():
                         self.raise_exception(line_nb, self.ExitInstruction, "Unknown name.")
                 asm.add_to_code_segment("syscall")
                 program["ended"] = True
+            elif tokens[0].verify("instruction", "write"):
+                asm.comment_code("Write instruction")
+                if len(s_arguments) != 1:
+                    self.raise_exception(line_nb, self.WriteInstruction, f"Wanted 1 argument, counted {len(s_arguments)}.")
+                if not (lang.is_a_stack(tokens[1]) or tokens[1].verify_type("integer") or tokens[1].verify_type("name")):
+                    self.raise_exception(line_nb, self.WriteInstruction, "Wanted first argument : memory, variable or stack.")
+                to_write = self.evaluate_stack(tokens[1]) if lang.is_a_stack(tokens[1]) else tokens[1]
+                if not to_write.token_type in ["name", "address"]:
+                    self.raise_exception(line_nb, self.WriteInstruction, "Wanted first argument : a name or an address.")
+                asm.add_to_code_segment("mov", "%ax", 1)
+                asm.add_to_code_segment("mov", "%di", 1)
+                if to_write.verify_type("name"):
+                    varelement = self.get_name(to_write)
+                    if isinstance(varelement, memory.MemoryElement):
+                        asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Support other memories
+                        if varelement.bytes[0].position: asm.add_to_code_segment("add", "%si", varelement.bytes[0].position)
+                        asm.add_to_code_segment("mov", "%dx", varelement.lenght)
+                    elif isinstance(varelement, memory.Memory):
+                        asm.add_to_code_segment("mov", "%si", varelement.with_prefix())
+                        asm.add_to_code_segment("mov", "%dx", varelement.size)
+                elif to_write.verify_type("address"):
+                    size = 1
+                    try: to_write.size
+                    except: pass
+                    else: size = to_write.size
+                    asm.add_to_code_segment("mov", "%si", to_write.token_string)
+                    asm.add_to_code_segment("mov", "%dx", size)
+                asm.add_to_code_segment("syscall")
             elif tokens[0].verify("instruction", "ini"):
                 asm.comment_code("Ini instruction")
                 if not len(s_arguments) in [2, 3, 4, 5]:
@@ -605,6 +668,8 @@ class Compiler():
                     self.raise_exception(line_nb, self.IniInstruction, "Variable already initialized.")
                 size = lang.TYPES_SIZES[vartype][0]
                 token_type = lang.TYPES_SIZES[vartype][1]
+                if vartype == "str" and asm.architecture == "x86": size = 4
+                if vartype == "addr" and asm.architecture == "x86": size = 4
                 lenght = 1
                 try: vartype_token.lenght
                 except: pass
@@ -619,11 +684,10 @@ class Compiler():
                 asm.comment_code(f"Add to memory '{self.memories[program['acmem']].with_prefix()}' the element '{varname}' of type {vartype}<{lenght}>")
                 if not value_token is None:
                     value = self.evaluate_stack(value_token) if lang.is_a_stack(value_token) else value_token
-                    asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Flexible allocation
                     if used_size: asm.add_to_code_segment("add", "%si", used_size)
                     for i in range(size * lenght):
                         self.memories[program["acmem"]].elements[-1].bytes.append(self.memories[program["acmem"]].get_free_bytes()[0])
-                    self.mov_token_to_address(value, self.memories[program["acmem"]].elements[-1].bytes, size, address_redirect=self.memories[program["acmem"]].elements[-1].redirect)
+                    self.mov_token_to_address(value, self.memories[program["acmem"]].elements[-1])
             elif tokens[0].verify_type("name"):
                 asm.comment_code("Variable value assignation")
                 if not len(s_arguments) == 2:
@@ -644,11 +708,10 @@ class Compiler():
                 else: varmemory = varname.memory
 
                 value = self.evaluate_stack(varvalue) if lang.is_a_stack(varvalue) else varvalue
-                asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Flexible allocation
                 if used_size: asm.add_to_code_segment("add", "%si", used_size)
                 for i in range(size * lenght):
                     varelement.bytes.append(varmemory.get_free_bytes()[0])
-                self.mov_token_to_address(value, varelement.bytes, size, address_redirect=self.memories[program["acmem"]].elements[-1].redirect)
+                self.mov_token_to_address(value, varelement)
             else: self.raise_exception(line_nb, self.InstructionReading, "Invalid instruction.")
 
     def get_memory(self, name:str) -> memory.Memory:
@@ -722,10 +785,13 @@ class Compiler():
         
         self.running_programs.pop()
     
-    def mov_token_to_address(self, token:lang.Token, varbytes:list[memory.MemoryByte], size:int=None, address_redirect:bool=False):
+    def mov_token_to_address(self, token:lang.Token, var:memory.MemoryElement): # TODO: Change this function name
         program = self.running_programs[-1]
         line_nb = program["line"]
         asm:fasm.Program = program["asm"]
+        varbytes = var.bytes
+        size = var.size
+        address_redirect = var.redirect
 
         if token.verify_type("integer"):
             nb = int(token.token_string)
@@ -738,6 +804,24 @@ class Compiler():
                 asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
                 if varbytepos: asm.add_to_code_segment("add", "%si", varbytepos)
                 asm.add_to_code_segment("mov", f"byte [%si]", byte)
+        elif token.verify_type("string"):
+            if var.type == "str":
+                chars = [*token.token_string]
+                for byte_index, byte in enumerate(varbytes):
+                    bytepos = byte.position
+                    if not byte_index < len(chars): break
+                    asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
+                    if bytepos: asm.add_to_code_segment("add", "%si", bytepos)
+                    char = chars[byte_index]
+                    asm.add_to_code_segment("mov", f"byte [%si]", min(max(0, ord(char)), 255))
+            elif var.type == "chr":
+                char = token.token_string
+                if len(char) != 1:
+                    self.raise_exception(line_nb, self.TokenToAddress, "Char values must have 1 character of lenght.")
+                asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
+                bytepos = varbytes[0].position
+                if bytepos: asm.add_to_code_segment("add", "%si", bytepos)
+                asm.add_to_code_segment("mov", f"byte [%si]", min(max(0, ord(char)), 255))
         # TODO: Do more token types.
         elif token.verify_type("address"):
             addr_size = 8

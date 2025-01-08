@@ -165,6 +165,10 @@ class Parser():
                     token = lang.Token(next_part_3, "name")
                     token.memory = part
                     parts_to_skip = 3
+                elif lang.is_a_integer(part) and next_part == lang.COLON and next_part_2 == lang.PERCENTAGE:
+                    token = lang.Token(lang.PERCENTAGE, "operator")
+                    token.size = int(part)
+                    parts_to_skip = 2
                 else:
                     token = lang.Token(part)
                 
