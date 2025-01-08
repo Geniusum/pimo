@@ -10,5 +10,6 @@
 // write [[2]]
 // exit [[2] %];
 
-ini str<90> x = "Hello, World!" ;
+// ini str<90> x = "Hello, World!" ;
 write ["Hello, World!"];
+exit 0;
