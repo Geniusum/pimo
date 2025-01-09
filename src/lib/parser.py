@@ -134,7 +134,7 @@ class Parser():
                 elif part + next_part == lang.DOUBLE_HASHTAG:
                     token = lang.Token(lang.DOUBLE_HASHTAG)
                     parts_to_skip = 1
-                elif part == lang.AMPERSAND and lang.is_a_integer(next_part):
+                elif part == lang.AMPERSAND and lang.is_an_integer(next_part):
                     string_id = str(int(next_part))
                     string = self.getStringFromRefID(lang.AMPERSAND + string_id)
                     if not string:
@@ -146,26 +146,26 @@ class Parser():
                     parts_to_skip = 2
                 elif part == lang.PARAGRAPH and lang.is_a_valid_name(next_part):
                     macro_name = next_part
-                    if not lang.is_a_upper_name(macro_name):
+                    if not lang.is_an_upper_name(macro_name):
                         self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.NotUpperCaseMacroName)
                     token = lang.Token(macro_name, "macro")
                     parts_to_skip = 1
                 elif part == lang.PERCENTAGE and lang.is_a_register(next_part):
                     token = lang.Token(lang.PERCENTAGE + next_part, "register")
                     parts_to_skip = 1
-                elif lang.is_a_type(part) and next_part == lang.LESS_THAN and lang.is_a_integer(next_part_2) and next_part_3 == lang.GREATER_THAN:
+                elif lang.is_a_type(part) and next_part == lang.LESS_THAN and lang.is_an_integer(next_part_2) and next_part_3 == lang.GREATER_THAN:
                     token = lang.Token(part, "type")
                     token.lenght = int(next_part_2)
                     parts_to_skip = 3
-                elif lang.is_a_integer(part) and next_part == lang.COLON and next_part_2 == lang.OPEN_HOOK:
+                elif lang.is_an_integer(part) and next_part == lang.COLON and next_part_2 == lang.OPEN_HOOK:
                     token = lang.Token(lang.OPEN_HOOK, "delimiter")
                     token.stack_size = int(part)
                     parts_to_skip = 2
-                elif lang.is_a_valid_name(part) and lang.is_a_upper_name(part) and next_part + next_part_2 == lang.DOUBLE_COLON and lang.is_a_valid_name(next_part_3) and lang.is_a_lower_name(next_part_3):
+                elif lang.is_a_valid_name(part) and lang.is_an_upper_name(part) and next_part + next_part_2 == lang.DOUBLE_COLON and lang.is_a_valid_name(next_part_3) and lang.is_a_lower_name(next_part_3):
                     token = lang.Token(next_part_3, "name")
                     token.memory = part
                     parts_to_skip = 3
-                elif lang.is_a_integer(part) and next_part == lang.COLON and next_part_2 == lang.PERCENTAGE:
+                elif lang.is_an_integer(part) and next_part == lang.COLON and next_part_2 == lang.PERCENTAGE:
                     token = lang.Token(lang.PERCENTAGE, "operator")
                     token.size = int(part)
                     parts_to_skip = 2
@@ -196,9 +196,22 @@ class Parser():
                     stack_block = lang.Block("stack", active_block, token)
                     active_block.elements.append(stack_block)
                     active_block = stack_block
-                elif token.verify("delimiter", lang.CLOSED_HOOK):
+                elif token.verify("delimiter", lang.OPEN_CURLY_BRACE):
+                    segment_block = lang.Block("segment", active_block, token)
+                    active_block.elements.append(segment_block)
+                    active_block = segment_block
+                elif token.verify("delimiter", lang.CLOSE_HOOK):
                     if active_block == root:
                         self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-existant block.")
+                    if active_block.kind != "stack":
+                        self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-stack block.")
+
+                    active_block = active_block.parent
+                elif token.verify("delimiter", lang.CLOSE_CURLY_BRACE):
+                    if active_block == root:
+                        self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-existant block.")
+                    if active_block.kind != "segment":
+                        self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-segment block.")
                     
                     active_block = active_block.parent
                 else:

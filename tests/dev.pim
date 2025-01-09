@@ -11,5 +11,6 @@
 // exit [[2] %];
 
 // ini str<90> x = "Hello, World!" ;
-write ["Hello, World!"];
+// ini u32 y = 64;
+write ["Hello"]; // ["Hello, World!\n"];
 exit 0;

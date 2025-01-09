@@ -15,7 +15,9 @@ DOT = "."
 AMPERSAND = "&"
 SPACE = " "
 OPEN_HOOK = "["
-CLOSED_HOOK = "]"
+CLOSE_HOOK = "]"
+OPEN_CURLY_BRACE = "{"
+CLOSE_CURLY_BRACE = "}"
 LESS_THAN = "<"
 GREATER_THAN = ">"
 PARAGRAPH = "§"
@@ -40,7 +42,7 @@ OPERATORS = [
             ]
 
 # Delimiters
-DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSED_HOOK]
+DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSE_HOOK, OPEN_CURLY_BRACE, CLOSE_CURLY_BRACE]
 
 # Registers
 REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
@@ -102,11 +104,11 @@ def is_a_valid_name(presumed_name: str):
         return False
     return all(char in NM_CHARS for char in presumed_name)
 
-def is_a_upper_name(presumed_upper_name:str): return presumed_upper_name == presumed_upper_name.upper()
+def is_an_upper_name(presumed_upper_name:str): return presumed_upper_name == presumed_upper_name.upper()
 
 def is_a_lower_name(presumed_lower_name:str): return presumed_lower_name == presumed_lower_name.lower()
 
-def is_a_integer(presumed_integer:str):
+def is_an_integer(presumed_integer:str):
     if not len(presumed_integer): return False
     for char in presumed_integer:
         if not char in DIGITS: return False
@@ -117,14 +119,14 @@ def is_a_decimal(presumed_decimal:str):
     parts = presumed_decimal.split(DOT)
     if not len(parts) == 2: return False
     for part in parts:
-        if not is_a_integer(part): return False
+        if not is_an_integer(part): return False
     return True
 
 def is_a_boolean(presumed_boolean:str):
     if presumed_boolean.lower() in ["true", "false"]: return True
     return False
 
-def is_a_operator(presumed_operator:str):
+def is_an_operator(presumed_operator:str):
     if presumed_operator.lower() in OPERATORS: return True
     return False
 
@@ -136,7 +138,7 @@ def is_a_register(presumed_register:str):
     if presumed_register in REGISTERS: return True
     return False
 
-def is_a_instruction(presumed_instruction:str):
+def is_an_instruction(presumed_instruction:str):
     if presumed_instruction.lower() in INSTRUCTIONS: return True
     return False
 
@@ -161,15 +163,15 @@ class Token():
             return "ppcommand"
         if is_a_boolean(self.token_string):
             return "boolean"
-        if is_a_integer(self.token_string):
+        if is_an_integer(self.token_string):
             return "integer"
         if is_a_decimal(self.token_string):
             return "decimal"
         if is_a_delimiter(self.token_string):
             return "delimiter"
-        if is_a_operator(self.token_string):
+        if is_an_operator(self.token_string):
             return "operator"
-        if is_a_instruction(self.token_string):
+        if is_an_instruction(self.token_string):
             return "instruction"
         if is_a_register(self.token_string):
             return "register"
@@ -303,6 +305,9 @@ def split_tokens(blocks:list, token_type:str=None, token_string:str=None) -> lis
 
 def is_a_stack(token:any) -> bool:
     return isinstance(token, Block) and token.kind == "stack"
+
+def is_a_segment(token:any) -> bool:
+    return isinstance(token, Block) and token.kind == "segment"
 
 def is_a_token(token:any) -> bool:
     return isinstance(token, Token)

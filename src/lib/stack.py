@@ -15,7 +15,7 @@ class Stack():
         self.elements:list[StackElement] = []
 
     def enough_size(self, size:int) -> bool:
-        return not len(self.get_free_positions()) < size
+        return not self.get_free_nb() < size
 
     def push(self, *args):
         self.elements.append(StackElement(*args))
@@ -30,6 +30,11 @@ class Stack():
         used_bytes = []
         for element in self.elements: used_bytes += element.bytes
         return used_bytes
+    
+    def get_used_nb(self) -> int:
+        used_nb = 0
+        for element in self.elements: used_nb += len(element.bytes)
+        return used_nb
     
     def get_used_positions(self) -> list[int]:
         used_positions = []
@@ -49,5 +54,7 @@ class Stack():
         free_bytes = self.get_free_bytes()
         for byte in free_bytes: free_positions.append(byte.position)
         return free_positions
+    
+    def get_free_nb(self) -> int: return self.size - self.get_used_nb()
     
     def with_prefix(self) -> str: return "stack_" + self.id
