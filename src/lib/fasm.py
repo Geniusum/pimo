@@ -43,6 +43,9 @@ class CodeSegment(CodePart):
             return super().get_formatted(replace_list)
         else:
             return ""
+    
+    def set_label(self, name:str):
+        self.instructions.append(f".{name}")
 
 class Program():
     def __init__(self, architecture: str = "x64"):
@@ -78,6 +81,9 @@ class Program():
 
     def add_to_code_segment(self, instruction:str, *args:list[str]):
         return self.__add_to_code_segment(" ".join([instruction.strip().lower(), ", ".join(self.args_to_string(args))]))
+    
+    def set_label_code(self, name:str):
+        return self.code_segment.set_label(name)
     
     def comment_code(self, comment:str):
         return self.__add_to_code_segment(f"; {comment}")
