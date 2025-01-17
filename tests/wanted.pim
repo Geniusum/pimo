@@ -15,8 +15,8 @@ func u8 print_x() {
 	// func u8 print_x() 2048 { ...
 	~::x ;  // For get the x variable from the program memory
 	~~::x ; // For get the x variable from the function memory
-	import x from ~;  // For import an extern variable to the actual memory
+	intern x ~;  // For import an extern variable to the actual memory
 	ini u8 y;
-	export y to ~;  // For export an intern variable to the selected memory
+	extern y ~;  // For export an intern variable to the selected memory
 	write uint_to_str(x);
 }

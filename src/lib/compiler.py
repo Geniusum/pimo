@@ -31,7 +31,7 @@ class Compiler():
         self.ids = []
         self.programs = [
             {
-                "asm": fasm.Program(architecture),
+                "asm": fasm.Program(),
                 "id": self.generate_id(),
                 "line": None,
                 "acmem": None,
@@ -76,8 +76,8 @@ class Compiler():
             self.raise_exception(self.StackEvaluation, "Full stack.")
         element = acstack.push(size, "integer")
         for byte in bytes:
-            asm.add_to_code_segment("mov", f"byte [%si]", byte)
-            asm.add_to_code_segment("add", "%si", 1)
+            asm.code.add_ins("mov", f"byte [%si]", byte)
+            asm.code.add_ins("add", "%si", 1)
     
     def add_decimal(self, nb:float):
         program = self.running_programs[-1]
@@ -91,8 +91,8 @@ class Compiler():
         acstack.push(size, "decimal")
         element = acstack.push(size, "integer")
         for byte in bytes:
-            asm.add_to_code_segment("mov", f"byte [%si]", byte)
-            asm.add_to_code_segment("add", "%si", 1)
+            asm.code.add_ins("mov", f"byte [%si]", byte)
+            asm.code.add_ins("add", "%si", 1)
     
     def add_boolean(self, bool:int):
         program = self.running_programs[-1]
@@ -104,8 +104,8 @@ class Compiler():
             self.raise_exception(self.StackEvaluation, "Full stack.")
         acstack.push(size, "decimal")
         element = acstack.push(size, "boolean")
-        asm.add_to_code_segment("mov", f"byte [%si]", bool)
-        asm.add_to_code_segment("add", "%si", 1)
+        asm.code.add_ins("mov", f"byte [%si]", bool)
+        asm.code.add_ins("add", "%si", 1)
     
     def evaluate_stack(self, block:lang.Block) -> lang.Token:
         stack_id = self.generate_id()
@@ -118,8 +118,8 @@ class Compiler():
         program["acstack"] = self.stacks[-1]
         acstack:stack.Stack = program["acstack"]
         asm:fasm.Program = program["asm"]
-        asm.add_to_code_segment("mov", "%si", acstack.with_prefix())
-        asm.comment_code(f"Started stack '{acstack.with_prefix()}' of size {stack_size}")
+        asm.code.add_ins("mov", "%si", acstack.with_prefix())
+        asm.code.add_comment(f"Started stack '{acstack.with_prefix()}' of size {stack_size}")
         elements = block.elements
         
         for token in elements:
@@ -148,8 +148,8 @@ class Compiler():
                     operator = "qword" if size == 8 else "dword"
                     token_type = token.token_type
                     element = acstack.push(size, token_type)
-                    asm.add_to_code_segment("mov", f"{operator} [{asm.get_register('si')}]", token.token_string)
-                    asm.add_to_code_segment("add", asm.get_register("si"), element.size)
+                    asm.code.add_ins("mov", f"{operator} [{asm.get_register('si')}]", token.token_string)
+                    asm.code.add_ins("add", asm.get_register("si"), element.size)
                 elif token.verify("operator", lang.PERCENTAGE):
                     size = 8
                     if asm.architecture == "x86": size = 4
@@ -174,11 +174,11 @@ class Compiler():
                         "type": target_type,
                         "operator": target_operator
                     })
-                    asm.add_to_code_segment("sub", asm.get_register("si"), size)
-                    asm.add_to_code_segment("mov", asm.get_register("ax"), f"{addr_operator} [{asm.get_register('si')}]")
-                    asm.add_to_code_segment("mov", "al", f"{target_operator} [{asm.get_register('si')}]")
-                    asm.add_to_code_segment("mov", f"{target_operator} [{asm.get_register('si')}]", "al")
-                    asm.add_to_code_segment("add", asm.get_register("si"), target_size)"""
+                    asm.code.add_ins("sub", asm.get_register("si"), size)
+                    asm.code.add_ins("mov", asm.get_register("ax"), f"{addr_operator} [{asm.get_register('si')}]")
+                    asm.code.add_ins("mov", "al", f"{target_operator} [{asm.get_register('si')}]")
+                    asm.code.add_ins("mov", f"{target_operator} [{asm.get_register('si')}]", "al")
+                    asm.code.add_ins("add", asm.get_register("si"), target_size)"""
             elif token.verify("operator", lang.PLUS):
                 if len(acstack.elements) < 2:
                     self.raise_exception(self.StackEvaluation, "Addition operation need 2 numbers on the stack.")
@@ -190,75 +190,75 @@ class Compiler():
                 if asm.architecture == "x86": rsize = 4
                 if nb_b.size > rsize or nb_a.size > rsize:
                     self.raise_exception(self.StackEvaluation, "Addition operation can support at maximum numbers of 8 bytes.")
-                asm.comment_code("Add stack operator")
-                asm.add_to_code_segment("sub", "%si", nb_b.size)
-                if nb_b.size < rsize: asm.add_to_code_segment("movzx", "%bx", f"{nb_b_operator} [%si]")
-                else: asm.add_to_code_segment("mov", "%bx", f"[%si]")
-                asm.add_to_code_segment("sub", "%si", nb_a.size)
-                if nb_a.size < rsize: asm.add_to_code_segment("movzx", "%cx", f"{nb_a_operator} [%si]")
-                else: asm.add_to_code_segment("mov", "%cx", f"[%si]")
+                asm.code.add_comment("Add stack operator")
+                asm.code.add_ins("sub", "%si", nb_b.size)
+                if nb_b.size < rsize: asm.code.add_ins("movzx", "%bx", f"{nb_b_operator} [%si]")
+                else: asm.code.add_ins("mov", "%bx", f"[%si]")
+                asm.code.add_ins("sub", "%si", nb_a.size)
+                if nb_a.size < rsize: asm.code.add_ins("movzx", "%cx", f"{nb_a_operator} [%si]")
+                else: asm.code.add_ins("mov", "%cx", f"[%si]")
 
-                """asm.add_to_code_segment("mov", "%di", "%bx")
+                """asm.code.add_ins("mov", "%di", "%bx")
                 for byte_index, byte in enumerate(nb_b.bytes):
-                    asm.add_to_code_segment("sub", "%si", 1)
-                    asm.add_to_code_segment("mov", "al", "byte [%si]")
-                    asm.add_to_code_segment("mov", "byte [%di]", "al")
-                    asm.add_to_code_segment("add", "%di", 1)"""
-                """asm.add_to_code_segment("sub", "%si", len(nb_b.bytes))
+                    asm.code.add_ins("sub", "%si", 1)
+                    asm.code.add_ins("mov", "al", "byte [%si]")
+                    asm.code.add_ins("mov", "byte [%di]", "al")
+                    asm.code.add_ins("add", "%di", 1)"""
+                """asm.code.add_ins("sub", "%si", len(nb_b.bytes))
                 for byte_index, byte in enumerate(nb_b.bytes):
-                    if byte_index: asm.add_to_code_segment("mov", "al", f"byte [%si + {byte_index}]")
-                    else: asm.add_to_code_segment("mov", "al", "byte [%si]")
-                    if byte_index: asm.add_to_code_segment("mov", f"byte [%bx + {byte_index}]", "al")
-                    else: asm.add_to_code_segment("mov", f"byte [%bx]", "al")
+                    if byte_index: asm.code.add_ins("mov", "al", f"byte [%si + {byte_index}]")
+                    else: asm.code.add_ins("mov", "al", "byte [%si]")
+                    if byte_index: asm.code.add_ins("mov", f"byte [%bx + {byte_index}]", "al")
+                    else: asm.code.add_ins("mov", f"byte [%bx]", "al")
                 for byte_index in reversed(range(rsize - len(nb_b.bytes))):
                     byte_index = rsize - byte_index - 1
-                    if byte_index: asm.add_to_code_segment("mov", f"byte [%bx + {byte_index}]", 0)
-                    else: asm.add_to_code_segment("mov", f"byte [%bx]", 0)
-                asm.add_to_code_segment("sub", "%si", len(nb_a.bytes))"""
+                    if byte_index: asm.code.add_ins("mov", f"byte [%bx + {byte_index}]", 0)
+                    else: asm.code.add_ins("mov", f"byte [%bx]", 0)
+                asm.code.add_ins("sub", "%si", len(nb_a.bytes))"""
                 """for byte_index, byte in enumerate(nb_a.bytes):
-                    if byte_index: asm.add_to_code_segment("mov", "al", f"byte [%si + {byte_index}]")
-                    else: asm.add_to_code_segment("mov", "al", "byte [%si]")
-                    if byte_index: asm.add_to_code_segment("mov", f"byte [%cx + {byte_index}]", "al")
-                    else: asm.add_to_code_segment("mov", f"byte [%cx]", "al")
+                    if byte_index: asm.code.add_ins("mov", "al", f"byte [%si + {byte_index}]")
+                    else: asm.code.add_ins("mov", "al", "byte [%si]")
+                    if byte_index: asm.code.add_ins("mov", f"byte [%cx + {byte_index}]", "al")
+                    else: asm.code.add_ins("mov", f"byte [%cx]", "al")
                 for byte_index in reversed(range(rsize - len(nb_b.bytes))):
                     byte_index = rsize - byte_index - 1
-                    if byte_index: asm.add_to_code_segment("mov", f"byte [%cx + {byte_index}]", 0)
-                    else: asm.add_to_code_segment("mov", f"byte [%cx]", 0)
-                # asm.add_to_code_segment("movzx", "%bx", "byte [%si]")"""
-                """asm.add_to_code_segment("mov", "%di", "%cx")
+                    if byte_index: asm.code.add_ins("mov", f"byte [%cx + {byte_index}]", 0)
+                    else: asm.code.add_ins("mov", f"byte [%cx]", 0)
+                # asm.code.add_ins("movzx", "%bx", "byte [%si]")"""
+                """asm.code.add_ins("mov", "%di", "%cx")
                 for byte_index, byte in enumerate(nb_b.bytes):
-                    asm.add_to_code_segment("sub", "%si", 1)
-                    asm.add_to_code_segment("mov", "al", "byte [%si]")
-                    asm.add_to_code_segment("mov", "byte [%di]", "al")
-                    asm.add_to_code_segment("add", "%di", 1)"""
-                # asm.add_to_code_segment("sub", "%si", len(nb_b.bytes))
-                # asm.add_to_code_segment("movzx", "%cx", "byte [%si]")
+                    asm.code.add_ins("sub", "%si", 1)
+                    asm.code.add_ins("mov", "al", "byte [%si]")
+                    asm.code.add_ins("mov", "byte [%di]", "al")
+                    asm.code.add_ins("add", "%di", 1)"""
+                # asm.code.add_ins("sub", "%si", len(nb_b.bytes))
+                # asm.code.add_ins("movzx", "%cx", "byte [%si]")
                 
-                asm.add_to_code_segment("add", "%bx", "%cx")
+                asm.code.add_ins("add", "%bx", "%cx")
                 """if nb_a.size >= nb_b.size:  # TODO: Find an other way
                     final_size = nb_a.size
                 else:
                     final_size = nb_b.size
                 final_operator = lang.bytes_to_operator(final_size)"""
                 
-                asm.add_to_code_segment("mov", f"{lang.bytes_to_operator(rsize)} [%si]", "%bx")
-                asm.add_to_code_segment("add", "%si", rsize)
+                asm.code.add_ins("mov", f"{lang.bytes_to_operator(rsize)} [%si]", "%bx")
+                asm.code.add_ins("add", "%si", rsize)
                 
-                # asm.add_to_code_segment("mov", "%di", "%bx")
+                # asm.code.add_ins("mov", "%di", "%bx")
                 # for i in range(final_size):
-                #     asm.add_to_code_segment("mov", "al", "byte [%di]")
-                #     asm.add_to_code_segment("mov", "byte [%si]", "al")
-                #     asm.add_to_code_segment("add", "%si", 1)
+                #     asm.code.add_ins("mov", "al", "byte [%di]")
+                #     asm.code.add_ins("mov", "byte [%si]", "al")
+                #     asm.code.add_ins("add", "%si", 1)
                 """for byte_index in range(final_size):
-                    if byte_index: asm.add_to_code_segment("mov", "al", f"byte [%bx + {byte_index}]")
-                    else: asm.add_to_code_segment("mov", "al", "byte [%bx]")
-                    asm.add_to_code_segment("mov", "byte [%si]", "al")
-                    asm.add_to_code_segment("add", "%si", 1)"""
-                # asm.add_to_code_segment("mov", "%si", "%bx")  # Need to support other size
-                # asm.add_to_code_segment("add", "%si", final_size)  # TODO : Change
+                    if byte_index: asm.code.add_ins("mov", "al", f"byte [%bx + {byte_index}]")
+                    else: asm.code.add_ins("mov", "al", "byte [%bx]")
+                    asm.code.add_ins("mov", "byte [%si]", "al")
+                    asm.code.add_ins("add", "%si", 1)"""
+                # asm.code.add_ins("mov", "%si", "%bx")  # Need to support other size
+                # asm.code.add_ins("add", "%si", final_size)  # TODO : Change
 
                 acstack.push(rsize, "integer")
-                asm.comment_code("End add stack operator")
+                asm.code.add_comment("End add stack operator")
             elif token.verify("operator", lang.PERCENTAGE):
                 print(acstack.get_used_positions())
                 addr_size = 8
@@ -275,13 +275,13 @@ class Compiler():
                 else: target_size = token.size
                 if target_size < 1:
                     self.raise_exception(self.StackEvaluation, "The target size must be at least of 1 byte of size.")
-                asm.add_to_code_segment("sub", "%si", addr_size)
-                asm.add_to_code_segment("mov", "%di", f"{addr_operator} [%si]")
+                asm.code.add_ins("sub", "%si", addr_size)
+                asm.code.add_ins("mov", "%di", f"{addr_operator} [%si]")
                 for i in range(target_size): # TODO: Make a placement operator for alligned allocation, TODO: Make a loop instead
-                    asm.add_to_code_segment("mov", "al", "byte [%di]")
-                    asm.add_to_code_segment("mov", "byte [%si]", "al")
-                    asm.add_to_code_segment("add", "%si", 1)
-                    asm.add_to_code_segment("add", "%di", 1)
+                    asm.code.add_ins("mov", "al", "byte [%di]")
+                    asm.code.add_ins("mov", "byte [%si]", "al")
+                    asm.code.add_ins("add", "%si", 1)
+                    asm.code.add_ins("add", "%di", 1)
                 acstack.push(target_size, "integer")
                 print(acstack.get_used_positions())
             elif token.verify_type("name") or token.verify("operator", lang.TILDE):
@@ -291,33 +291,33 @@ class Compiler():
                 if isinstance(unit, memory.MemoryElement):
                     element = unit
                     for byte in element.bytes:
-                        asm.add_to_code_segment("mov", "%ax", self.memories[program["acmem"]].with_prefix())
-                        if byte.position: asm.add_to_code_segment("add", "%ax", byte.position)
-                        asm.add_to_code_segment("mov", "al", "byte [%ax]")
-                        asm.add_to_code_segment("mov", "byte [%si]", "al")
-                        asm.add_to_code_segment("add", "%si", 1)
+                        asm.code.add_ins("mov", "%ax", self.memories[program["acmem"]].with_prefix())
+                        if byte.position: asm.code.add_ins("add", "%ax", byte.position)
+                        asm.code.add_ins("mov", "al", "byte [%ax]")
+                        asm.code.add_ins("mov", "byte [%si]", "al")
+                        asm.code.add_ins("add", "%si", 1)
                     acstack.push(element.size, token.token_type)
                 elif isinstance(unit, memory.Memory):
                     rsize = 8
                     if asm.architecture == "x86": rsize = 4
                     roperator = lang.bytes_to_operator(rsize)
-                    asm.add_to_code_segment("mov", f"{roperator} [%si]", unit.with_prefix())
-                    asm.add_to_code_segment("add", "%si", rsize)
+                    asm.code.add_ins("mov", f"{roperator} [%si]", unit.with_prefix())
+                    asm.code.add_ins("add", "%si", rsize)
                     acstack.push(rsize, token.token_type)
             elif token.verify_type("address"):
                 rsize = 8
                 if asm.architecture == "x86": rsize = 4
                 roperator = lang.bytes_to_operator(rsize)
-                asm.add_to_code_segment("mov", f"{roperator} [%si]", token.token_string)
-                asm.add_to_code_segment("add", "%si", rsize)
+                asm.code.add_ins("mov", f"{roperator} [%si]", token.token_string)
+                asm.code.add_ins("add", "%si", rsize)
                 acstack.push(rsize, token.token_type)
             elif token.verify_type("string"):
                 chars = [*token.token_string]
                 for char in chars:
                     if not acstack.enough_size(1):
                         self.raise_exception(self.StackEvaluation, "Full stack.")
-                    asm.add_to_code_segment("mov", "byte [%si]", min(max(0, ord(char)), 255))
-                    asm.add_to_code_segment("add", "%si", 1)
+                    asm.code.add_ins("mov", "byte [%si]", min(max(0, ord(char)), 255))
+                    asm.code.add_ins("add", "%si", 1)
                     acstack.push(1, "string")
             else:
                 self.raise_exception(self.StackEvaluation, "Other types not yet supported.")
@@ -454,7 +454,7 @@ class Compiler():
             s_arguments = tokens[1:]
 
             if tokens[0].verify("instruction", "exit"):
-                asm.comment_code("Exit instruction")
+                asm.code.add_comment("Exit instruction")
                 if not len(arguments) != 2:
                     self.raise_exception(self.ExitInstruction, f"Wanted 1 argument, counted {len(arguments)}.")
                 if not (lang.is_a_stack(tokens[1]) or tokens[1].verify_type("integer") or tokens[1].verify_type("name")):
@@ -462,12 +462,12 @@ class Compiler():
                 exit_code = self.evaluate_stack(tokens[1]) if lang.is_a_stack(tokens[1]) else tokens[1]
                 if not (exit_code.verify_type("integer") or exit_code.verify_type("address") or exit_code.verify_type("name")):
                     self.raise_exception(self.ExitInstruction, "Wanted first argument result : integer or address.")
-                asm.add_to_code_segment("mov", asm.get_register("ax"), 60)
+                asm.code.add_ins("mov", "%ax", 60)
                 if exit_code.verify_type("address"):
-                    asm.add_to_code_segment("mov", asm.get_register("si"), exit_code.token_string)
-                    asm.add_to_code_segment("movzx", asm.get_register("di"), f"byte [{asm.get_register('si')}]")
+                    asm.code.add_ins("mov", "%si", exit_code.token_string)
+                    asm.code.add_ins("movzx", "%di", f"byte [%si]")
                 elif exit_code.verify_type("integer"):
-                    asm.add_to_code_segment("mov", asm.get_register("di"), exit_code.token_string)
+                    asm.code.add_ins("mov", "%di", exit_code.token_string)
                 elif exit_code.verify_type("name"):
                     varname = exit_code.token_string
                     if lang.is_a_lower_name(varname):
@@ -480,23 +480,23 @@ class Compiler():
                         if varelement.size != 1:
                             self.raise_exception(self.ExitInstruction, "Exit code are 1 byte unsigned integer.")
                         
-                        asm.add_to_code_segment("xor", "rdi", "rdi")
+                        asm.code.add_ins("xor", "rdi", "rdi")
 
                         byte = varelement.bytes[0]
                         byte_position = byte.position
 
-                        asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())
-                        if byte_position: asm.add_to_code_segment("add", "%si", byte_position)
-                        asm.add_to_code_segment("mov", "bl", "byte [%si]")
-                        asm.add_to_code_segment("movzx", "%di", "bl")
+                        asm.code.add_ins("mov", "%si", self.memories[program["acmem"]].with_prefix())
+                        if byte_position: asm.code.add_ins("add", "%si", byte_position)
+                        asm.code.add_ins("mov", "bl", "byte [%si]")
+                        asm.code.add_ins("movzx", "%di", "bl")
                     elif lang.is_an_upper_name(varname):
                         self.raise_exception(self.ExitInstruction, "Memory not supported here.")
                     else:
                         self.raise_exception(self.ExitInstruction, "Unknown name.")
-                asm.add_to_code_segment("syscall")
+                asm.code.add_ins("syscall")
                 program["ended"] = True
             elif tokens[0].verify("instruction", "write"):
-                asm.comment_code("Write instruction")
+                asm.code.add_comment("Write instruction")
                 if len(s_arguments) != 1:
                     self.raise_exception(self.WriteInstruction, f"Wanted 1 argument, counted {len(s_arguments)}.")
                 if lang.is_a_token(tokens[1]) and tokens[1].verify("operator", lang.TILDE):
@@ -506,27 +506,27 @@ class Compiler():
                 to_write = self.evaluate_stack(tokens[1]) if lang.is_a_stack(tokens[1]) else tokens[1]
                 if not to_write.token_type in ["name", "address"]:
                     self.raise_exception(self.WriteInstruction, "Wanted first argument : a name or an address.")
-                asm.add_to_code_segment("mov", "%ax", 1)
-                asm.add_to_code_segment("mov", "%di", 1)
+                asm.code.add_ins("mov", "%ax", 1)
+                asm.code.add_ins("mov", "%di", 1)
                 if to_write.verify_type("name"):
                     varelement = self.get_name(to_write)
                     if isinstance(varelement, memory.MemoryElement):
-                        asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Support other memories
-                        if varelement.bytes[0].position: asm.add_to_code_segment("add", "%si", varelement.bytes[0].position)
-                        asm.add_to_code_segment("mov", "%dx", varelement.lenght)
+                        asm.code.add_ins("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Support other memories
+                        if varelement.bytes[0].position: asm.code.add_ins("add", "%si", varelement.bytes[0].position)
+                        asm.code.add_ins("mov", "%dx", varelement.lenght)
                     elif isinstance(varelement, memory.Memory):
-                        asm.add_to_code_segment("mov", "%si", varelement.with_prefix())
-                        asm.add_to_code_segment("mov", "%dx", varelement.size)
+                        asm.code.add_ins("mov", "%si", varelement.with_prefix())
+                        asm.code.add_ins("mov", "%dx", varelement.size)
                 elif to_write.verify_type("address"):
                     size = 1
                     try: to_write.size
                     except: pass
                     else: size = to_write.size
-                    asm.add_to_code_segment("mov", "%si", to_write.token_string)
-                    asm.add_to_code_segment("mov", "%dx", size)
-                asm.add_to_code_segment("syscall")
+                    asm.code.add_ins("mov", "%si", to_write.token_string)
+                    asm.code.add_ins("mov", "%dx", size)
+                asm.code.add_ins("syscall")
             elif tokens[0].verify("instruction", "ini"):
-                asm.comment_code("Ini instruction")
+                asm.code.add_comment("Ini instruction")
                 if not len(s_arguments) in [2, 3, 4, 5]:
                     self.raise_exception(self.ExitInstruction, f"Wanted 2 to 5 arguments, counted {len(s_arguments)}.")
                 
@@ -579,15 +579,15 @@ class Compiler():
                 if size * lenght > free_size:
                     self.raise_exception(self.IniInstruction, "Full memory.")
                 self.memories[program["acmem"]].elements.append(memory.MemoryElement(varname, size, lenght, vartype, token_type, redirect))
-                asm.comment_code(f"Add to memory '{self.memories[program['acmem']].with_prefix()}' the element '{varname}' of type {vartype}<{lenght}>")
+                asm.code.add_comment(f"Add to memory '{self.memories[program['acmem']].with_prefix()}' the element '{varname}' of type {vartype}<{lenght}>")
                 if not value_token is None:
                     value = self.evaluate_stack(value_token) if lang.is_a_stack(value_token) else value_token
-                    if used_size: asm.add_to_code_segment("add", "%si", used_size)
+                    if used_size: asm.code.add_ins("add", "%si", used_size)
                     for i in range(size * lenght):
                         self.memories[program["acmem"]].elements[-1].bytes.append(self.memories[program["acmem"]].get_free_bytes()[0])
                     self.mov_token_to_address(value, self.memories[program["acmem"]].elements[-1])
             elif tokens[0].verify_type("name"):
-                asm.comment_code("Variable value assignation")
+                asm.code.add_comment("Variable value assignation")
                 if not len(s_arguments) == 2:
                     self.raise_exception(self.VariableValueAssignation, f"Wanted 2 arguments, counted {len(s_arguments)}.")
                 if not tokens[1].verify("operator", lang.EQUAL):
@@ -606,7 +606,7 @@ class Compiler():
                 else: varmemory = varname.memory
 
                 value = self.evaluate_stack(varvalue) if lang.is_a_stack(varvalue) else varvalue
-                if used_size: asm.add_to_code_segment("add", "%si", used_size)
+                if used_size: asm.code.add_ins("add", "%si", used_size)
                 for i in range(size * lenght):
                     varelement.bytes.append(varmemory.get_free_bytes()[0])
                 self.mov_token_to_address(value, varelement)
@@ -665,19 +665,19 @@ class Compiler():
         for memory_ in self.memories: # Put memories in the data segment
             memory_id = memory_.id
             memory_size = memory_.size
-            asm.add_to_data_segment("mem_" + memory_id, "rb", memory_size)
+            asm.data.add_def("mem_" + memory_id, "rb", memory_size)
 
         for stack_ in self.stacks: # Put stacks in the data segment
             stack_id = stack_.id
             stack_size = stack_.size
-            asm.add_to_data_segment("stack_" + stack_id, "rb", stack_size)
-            asm.add_to_code_segment("mov", "%si", stack_.with_prefix())
+            asm.data.add_def("stack_" + stack_id, "rb", stack_size)
+            asm.code.add_ins("mov", "%si", stack_.with_prefix())
 
         if not program["ended"]: # End with exit code 0 if not already done
-            asm.comment_code("Default exit")
-            asm.add_to_code_segment("mov", "%ax", 60)
-            asm.add_to_code_segment("mov", "%di", 0)
-            asm.add_to_code_segment("syscall")
+            asm.code.add_comment("Default exit")
+            asm.code.add_ins("mov", "%ax", 60)
+            asm.code.add_ins("mov", "%di", 0)
+            asm.code.add_ins("syscall")
         
         self.running_programs.pop()
     
@@ -696,27 +696,27 @@ class Compiler():
             for byte_index, byte in enumerate(bytes):
                 varbyte = varbytes[byte_index]
                 varbytepos = varbyte.position
-                asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
-                if varbytepos: asm.add_to_code_segment("add", "%si", varbytepos)
-                asm.add_to_code_segment("mov", f"byte [%si]", byte)
+                asm.code.add_ins("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
+                if varbytepos: asm.code.add_ins("add", "%si", varbytepos)
+                asm.code.add_ins("mov", f"byte [%si]", byte)
         elif token.verify_type("string"):
             if var.type == "str":
                 chars = [*token.token_string]
                 for byte_index, byte in enumerate(varbytes):
                     bytepos = byte.position
                     if not byte_index < len(chars): break
-                    asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
-                    if bytepos: asm.add_to_code_segment("add", "%si", bytepos)
+                    asm.code.add_ins("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
+                    if bytepos: asm.code.add_ins("add", "%si", bytepos)
                     char = chars[byte_index]
-                    asm.add_to_code_segment("mov", f"byte [%si]", min(max(0, ord(char)), 255))
+                    asm.code.add_ins("mov", f"byte [%si]", min(max(0, ord(char)), 255))
             elif var.type == "chr":
                 char = token.token_string
                 if len(char) != 1:
                     self.raise_exception(self.TokenToAddress, "Char values must have 1 character of lenght.")
-                asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
+                asm.code.add_ins("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
                 bytepos = varbytes[0].position
-                if bytepos: asm.add_to_code_segment("add", "%si", bytepos)
-                asm.add_to_code_segment("mov", f"byte [%si]", min(max(0, ord(char)), 255))
+                if bytepos: asm.code.add_ins("add", "%si", bytepos)
+                asm.code.add_ins("mov", f"byte [%si]", min(max(0, ord(char)), 255))
         # TODO: Do more token types.
         elif token.verify_type("address"):
             addr_size = 8
@@ -724,16 +724,16 @@ class Compiler():
             addr_operator = "qword" if addr_size == 8 else "dword"
             if address_redirect:
                 if size is None: size = 1
-                asm.add_to_code_segment("mov", f"%ax", token.token_string)
+                asm.code.add_ins("mov", f"%ax", token.token_string)
                 for i in range(size):
                     varbyte = varbytes[i]
                     varbytepos = varbyte.position
-                    asm.add_to_code_segment("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
-                    if varbytepos: asm.add_to_code_segment("add", "%si", varbytepos)
-                    asm.add_to_code_segment("mov", "al", "byte [%ax]")
-                    asm.add_to_code_segment("mov", "byte [%si]", "al")
+                    asm.code.add_ins("mov", "%si", self.memories[program["acmem"]].with_prefix())  # TODO: Change to support other memories
+                    if varbytepos: asm.code.add_ins("add", "%si", varbytepos)
+                    asm.code.add_ins("mov", "al", "byte [%ax]")
+                    asm.code.add_ins("mov", "byte [%si]", "al")
             else:
-                asm.add_to_code_segment("mov", f"{addr_operator} [%si]", token.token_string)
+                asm.code.add_ins("mov", f"{addr_operator} [%si]", token.token_string)
         else:
             self.raise_exception(self.TokenToAddress, "Invalid token type.")
     
