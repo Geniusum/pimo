@@ -1,0 +1,18 @@
+#mem ~ 512
+#acmem 512
+#include !std
+
+func fib(int n) {
+	if [n 0 ==] return 0;
+	if [n 1 == n 2 == or or] return 1;
+	return fib([n 1 -]) + fib([n 2 -])
+}
+
+func main() {
+	// global std::range range;
+	global std::itos itos;
+	ini u8 i;
+	for ({[i 10 <=]} {[i ++]}) {
+		write [itos(fib(i)) 10];
+	}
+}
