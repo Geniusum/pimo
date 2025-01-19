@@ -251,7 +251,7 @@ class Compiler():
                     builder = llvm_ir.IRBuilder(inner)
                     builder.ret_void()
                     continue
-                
+                # TODO: Expression, replace stack
             else:
                 self.raise_exception(self.InvalidInstruction)
     
