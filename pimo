@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 ./src/pimo.py $@
+./venv/bin/python ./src/pimo.py $@

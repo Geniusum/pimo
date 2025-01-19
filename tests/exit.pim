@@ -1,4 +1,4 @@
 #mem ~ 512
 #acmem ~
 
-exit [3 4 + 1 +]  // Exit with code 8
+exit [3 4 + 1 +];  // Exit with code 8

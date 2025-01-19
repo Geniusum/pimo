@@ -1,4 +1,0 @@
-#!/bin/bash
-fasm $1.asm
-chmod +x $1
-./$1
