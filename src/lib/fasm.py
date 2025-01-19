@@ -1,12 +1,18 @@
 class Segment():
-    def __init__(self):
+    def __init__(self, compiler):
+        self.compiler = compiler
         self.lines = []
         self.sections = []
+    
+    def complete_with_info(self, line:str):
+        if len(self.compiler.running_programs):
+            line += f"  ; {self.compiler.running_programs[-1]['line']}"
+        return line
     
     def add_line(self, content:str, indent:bool=False):
         line = "\t" if indent else ""
         line += content
-        self.lines.append(line.replace("%", "r"))
+        self.lines.append(self.complete_with_info(line.replace("%", "r")))
     
     def add_ins(self, instruction:str, *args:list[str]):
         self.add_line(" ".join([instruction.strip().lower(), ", ".join(self.args_to_string(args))]))
@@ -35,21 +41,31 @@ class Section():
         self.index = len(self.segment.lines) - 1
     
     def add_line(self, content:str):
-        self.segment.lines.insert(self.index, f"\t{content.replace('%', 'r')}")
+        self.segment.lines.insert(self.index, self.segment.complete_with_info(f"\t{content.replace('%', 'r')}"))
+    
+    def add_ins(self, instruction:str, *args:list[str]):
+        self.add_line(" ".join([instruction.strip().lower(), ", ".join(self.args_to_string(args))]))
+    
+    def add_def(self, name:str, type:str, *args:list[str]):
+        self.add_line(" ".join([name.strip(), type.strip().lower(), ", ".join(self.args_to_string(args))]))
+    
+    def add_comment(self, content:str):
+        self.add_line(f"; {content}")
 
 class Program():
-    def __init__(self):
+    def __init__(self, compiler):
+        self.compiler = compiler
         self.segments:list[Segment] = []
         self.architecture = "x64"
-        self.format = Segment()
+        self.format = Segment(self.compiler)
         self.format.add_line("format ELF64 executable 3")
         self.segments.append(self.format)
-        self.modules = Segment()
+        self.modules = Segment(self.compiler)
         self.segments.append(self.modules)
-        self.code = Segment()
+        self.code = Segment(self.compiler)
         self.code.add_line("segment readable executable")
         self.segments.append(self.code)
-        self.data = Segment()
+        self.data = Segment(self.compiler)
         self.data.add_line("segment readable writeable")
         self.segments.append(self.data)
     

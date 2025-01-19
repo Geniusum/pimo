@@ -3,6 +3,7 @@ import lib.logger as logger
 import lib.lang as lang
 import lib.utils as utils
 import lib.memory as memory
+import lib.program as program
 import lib.stack as stack
 import random, copy
 
@@ -24,21 +25,13 @@ class Compiler():
     class NameFinding(BaseException): ...
     class VariableValueAssignation(BaseException): ...
     
-    def __init__(self, pimo_instance, architecture:str="x64"):
+    def __init__(self, pimo_instance):
         self.pimo_instance = pimo_instance
         self.logger:logger.Logger = self.pimo_instance.logger
         self.error_logger:logger.ErrorLogger = self.pimo_instance.error_logger
         self.ids = []
-        self.programs = [
-            {
-                "asm": fasm.Program(),
-                "id": self.generate_id(),
-                "line": None,
-                "acmem": None,
-                "acstack": None,
-                "ended": False
-            } # TODO : Program class
-        ]
+        self.running_programs:list[program.Program] = []
+        self.programs:list[program.Program] = [program.Program(pimo_instance.sourcecode, fasm.Program(self), self.generate_id())]
         self.main_program = self.programs[0]
         self.memories:list[memory.Memory] = []
         self.stacks:list[stack.Stack] = []
@@ -48,7 +41,6 @@ class Compiler():
             } # TODO : Scope class
         }
         self.main_scope = self.scopes[self.main_program["id"]]
-        self.running_programs = []
     
     def generate_id(self) -> str:
         size = 8
@@ -135,50 +127,6 @@ class Compiler():
                 bool = 0
                 if token.token_string.lower() == "true": bool = 1
                 self.add_boolean(bool)
-                """elif token.verify_type("address"): # TODO: Not do that, because the operator % do that
-                    size = 8
-                    if asm.architecture == "x86": size = 4
-                    if not acstack.enough_size(size):
-                        self.raise_exception(self.StackEvaluation, "Full stack.")
-                    try: token.size
-                    except: pass
-                    else: size = token.size
-                    if not size in [4, 8]:
-                        self.raise_exception(self.StackEvaluation, "Only x86 and x64 addresses accepted.")
-                    operator = "qword" if size == 8 else "dword"
-                    token_type = token.token_type
-                    element = acstack.push(size, token_type)
-                    asm.code.add_ins("mov", f"{operator} [{asm.get_register('si')}]", token.token_string)
-                    asm.code.add_ins("add", asm.get_register("si"), element.size)
-                elif token.verify("operator", lang.PERCENTAGE):
-                    size = 8
-                    if asm.architecture == "x86": size = 4
-                    if not acstack["elements"]:
-                        self.raise_exception(self.StackEvaluation, "Empty stack, wanted an address.")
-                    if not acstack["elements"][-1]["size"] == size:
-                        self.raise_exception(self.StackEvaluation, "Wanted a valid address.")
-                    addr_operator = "qword" if size == 8 else "dword"
-                    target_size = 1
-                    target_operator = "byte"
-                    try: token.target
-                    except: pass
-                    else:
-                        target_size = token.target["size"]
-                        target_operator, target_size = lang.bytes_to_operator(target_size), lang.operator_to_bytes(lang.bytes_to_operator(target_size))
-                        target_type = token.target["type"]
-                    if free_size < target_size:
-                        self.raise_exception(self.StackEvaluation, "Full stack.")
-                    acstack.pop()
-                    acstack.append({
-                        "size": target_size,
-                        "type": target_type,
-                        "operator": target_operator
-                    })
-                    asm.code.add_ins("sub", asm.get_register("si"), size)
-                    asm.code.add_ins("mov", asm.get_register("ax"), f"{addr_operator} [{asm.get_register('si')}]")
-                    asm.code.add_ins("mov", "al", f"{target_operator} [{asm.get_register('si')}]")
-                    asm.code.add_ins("mov", f"{target_operator} [{asm.get_register('si')}]", "al")
-                    asm.code.add_ins("add", asm.get_register("si"), target_size)"""
             elif token.verify("operator", lang.PLUS):
                 if len(acstack.elements) < 2:
                     self.raise_exception(self.StackEvaluation, "Addition operation need 2 numbers on the stack.")
@@ -197,65 +145,11 @@ class Compiler():
                 asm.code.add_ins("sub", "%si", nb_a.size)
                 if nb_a.size < rsize: asm.code.add_ins("movzx", "%cx", f"{nb_a_operator} [%si]")
                 else: asm.code.add_ins("mov", "%cx", f"[%si]")
-
-                """asm.code.add_ins("mov", "%di", "%bx")
-                for byte_index, byte in enumerate(nb_b.bytes):
-                    asm.code.add_ins("sub", "%si", 1)
-                    asm.code.add_ins("mov", "al", "byte [%si]")
-                    asm.code.add_ins("mov", "byte [%di]", "al")
-                    asm.code.add_ins("add", "%di", 1)"""
-                """asm.code.add_ins("sub", "%si", len(nb_b.bytes))
-                for byte_index, byte in enumerate(nb_b.bytes):
-                    if byte_index: asm.code.add_ins("mov", "al", f"byte [%si + {byte_index}]")
-                    else: asm.code.add_ins("mov", "al", "byte [%si]")
-                    if byte_index: asm.code.add_ins("mov", f"byte [%bx + {byte_index}]", "al")
-                    else: asm.code.add_ins("mov", f"byte [%bx]", "al")
-                for byte_index in reversed(range(rsize - len(nb_b.bytes))):
-                    byte_index = rsize - byte_index - 1
-                    if byte_index: asm.code.add_ins("mov", f"byte [%bx + {byte_index}]", 0)
-                    else: asm.code.add_ins("mov", f"byte [%bx]", 0)
-                asm.code.add_ins("sub", "%si", len(nb_a.bytes))"""
-                """for byte_index, byte in enumerate(nb_a.bytes):
-                    if byte_index: asm.code.add_ins("mov", "al", f"byte [%si + {byte_index}]")
-                    else: asm.code.add_ins("mov", "al", "byte [%si]")
-                    if byte_index: asm.code.add_ins("mov", f"byte [%cx + {byte_index}]", "al")
-                    else: asm.code.add_ins("mov", f"byte [%cx]", "al")
-                for byte_index in reversed(range(rsize - len(nb_b.bytes))):
-                    byte_index = rsize - byte_index - 1
-                    if byte_index: asm.code.add_ins("mov", f"byte [%cx + {byte_index}]", 0)
-                    else: asm.code.add_ins("mov", f"byte [%cx]", 0)
-                # asm.code.add_ins("movzx", "%bx", "byte [%si]")"""
-                """asm.code.add_ins("mov", "%di", "%cx")
-                for byte_index, byte in enumerate(nb_b.bytes):
-                    asm.code.add_ins("sub", "%si", 1)
-                    asm.code.add_ins("mov", "al", "byte [%si]")
-                    asm.code.add_ins("mov", "byte [%di]", "al")
-                    asm.code.add_ins("add", "%di", 1)"""
-                # asm.code.add_ins("sub", "%si", len(nb_b.bytes))
-                # asm.code.add_ins("movzx", "%cx", "byte [%si]")
                 
                 asm.code.add_ins("add", "%bx", "%cx")
-                """if nb_a.size >= nb_b.size:  # TODO: Find an other way
-                    final_size = nb_a.size
-                else:
-                    final_size = nb_b.size
-                final_operator = lang.bytes_to_operator(final_size)"""
                 
                 asm.code.add_ins("mov", f"{lang.bytes_to_operator(rsize)} [%si]", "%bx")
                 asm.code.add_ins("add", "%si", rsize)
-                
-                # asm.code.add_ins("mov", "%di", "%bx")
-                # for i in range(final_size):
-                #     asm.code.add_ins("mov", "al", "byte [%di]")
-                #     asm.code.add_ins("mov", "byte [%si]", "al")
-                #     asm.code.add_ins("add", "%si", 1)
-                """for byte_index in range(final_size):
-                    if byte_index: asm.code.add_ins("mov", "al", f"byte [%bx + {byte_index}]")
-                    else: asm.code.add_ins("mov", "al", "byte [%bx]")
-                    asm.code.add_ins("mov", "byte [%si]", "al")
-                    asm.code.add_ins("add", "%si", 1)"""
-                # asm.code.add_ins("mov", "%si", "%bx")  # Need to support other size
-                # asm.code.add_ins("add", "%si", final_size)  # TODO : Change
 
                 acstack.push(rsize, "integer")
                 asm.code.add_comment("End add stack operator")

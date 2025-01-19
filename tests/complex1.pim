@@ -9,10 +9,9 @@ func fib(int n) {
 }
 
 func main() {
-	// global std::range range;
-	global std::itos itos;
+	import std::itos itos;
 	ini u8 i;
-	for ({[i 10 <=]} {[i ++]}) {
+	for ([i 10 <=] {i++}) {
 		write [itos(fib(i)) 10];
 	}
 }

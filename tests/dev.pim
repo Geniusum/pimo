@@ -14,3 +14,6 @@
 // ini u32 y = 64;
 write ["Hello"]; // ["Hello, World!\n"];
 exit 0;
+
+// ini addr result at ~!4 % = [3 5 +];
+// exit result;

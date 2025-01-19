@@ -25,7 +25,7 @@ class Main():
         self.arg_parser = argparse.ArgumentParser(prog="pimo", description="Compile .pim programs.")
         self.arg_parser.add_argument("-t", "--timer", action="store_true")  # For get compile time
         self.arg_parser.add_argument("-o", "--output", type=str)  # For choose a specific output path
-        self.arg_parser.add_argument("-a", "--architecture", type=str)  # For choose a specific output path
+        #self.arg_parser.add_argument("-a", "--architecture", type=str)  # For choose a specific output path
         self.arg_parser.add_argument("-p", "--parsed", action="store_true")  # For return the parser result
         self.arg_parser.add_argument("-d", "--direct", action="store_true")  # For no assembly, it will create an assembly but it will delete it after
         self.arg_parser.add_argument("-b", "--bum", action="store_true")  # For no compile
@@ -41,7 +41,7 @@ class Main():
         self.silent:bool = self.args["silent"]
         self.timer:bool = self.args["timer"]
         self.output:str = self.args["output"]
-        self.architecture:str = self.args["architecture"]
+        #self.architecture:str = self.args["architecture"]
         self.parsed:bool = self.args["parsed"]
         self.direct:bool = self.args["direct"]
         self.bum:bool = self.args["bum"]
@@ -63,7 +63,7 @@ class Main():
 
         self.parser = parser.Parser(self)
         
-        self.compiler = compiler.Compiler(self, self.architecture)
+        self.compiler = compiler.Compiler(self)
 
     def raise_exception(self, exception:BaseException, *args):
         error_args = f"\n{self.error_logger.start}      ↳ ".join(args)
