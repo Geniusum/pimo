@@ -93,6 +93,7 @@ class Parser():
         lines = content.splitlines()
 
         for line_index, line in enumerate(lines):
+            line.replace("\t", "")
             segments.append({"line": line_index + 1, "tokens": [], "parts": []})
             parts = segments[-1]["parts"]
             for char in line:
@@ -200,6 +201,10 @@ class Parser():
                     segment_block = lang.Block("segment", active_block, token)
                     active_block.elements.append(segment_block)
                     active_block = segment_block
+                elif token.verify("delimiter", lang.OPEN_BRACKET):
+                    segment_block = lang.Block("options", active_block, token)
+                    active_block.elements.append(segment_block)
+                    active_block = segment_block
                 elif token.verify("delimiter", lang.CLOSE_HOOK):
                     if active_block == root:
                         self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-existant block.")
@@ -212,6 +217,13 @@ class Parser():
                         self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-existant block.")
                     if active_block.kind != "segment":
                         self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-segment block.")
+                    
+                    active_block = active_block.parent
+                elif token.verify("delimiter", lang.CLOSE_BRACKET):
+                    if active_block == root:
+                        self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-existant block.")
+                    if active_block.kind != "options":
+                        self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-options block.")
                     
                     active_block = active_block.parent
                 else:

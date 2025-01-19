@@ -1,6 +1,8 @@
+import llvmlite as llvm
+import llvmlite.ir as llvm_ir
+import lib.utils as utils
 from lib.enum import *
 import struct
-import lib.utils as utils 
 
 #########################
 #  LEXICAL DEFINITIONS  #
@@ -18,6 +20,8 @@ OPEN_HOOK = "["
 CLOSE_HOOK = "]"
 OPEN_CURLY_BRACE = "{"
 CLOSE_CURLY_BRACE = "}"
+OPEN_BRACKET = "("
+CLOSE_BRACKET = ")"
 LESS_THAN = "<"
 GREATER_THAN = ">"
 PARAGRAPH = "§"
@@ -42,31 +46,44 @@ OPERATORS = [
             ]
 
 # Delimiters
-DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSE_HOOK, OPEN_CURLY_BRACE, CLOSE_CURLY_BRACE]
+DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSE_HOOK, OPEN_CURLY_BRACE, CLOSE_CURLY_BRACE, OPEN_BRACKET, CLOSE_BRACKET]
 
 # Registers
 REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
 
 # Instructions
-INSTRUCTIONS = ["exit", "write", "ini"]
+INSTRUCTIONS = ["exit", "write", "ini", "func", "return"]
 
 # Types
-TYPES_SIZES = {
-    "u8": [1, "integer"],
-    "u16": [2, "integer"],
-    "u24": [3, "integer"],
-    "u32": [4, "integer"],
-    "u64": [8, "integer"],
-    "chr": [1, "string"],
-    "bool": [1, "boolean"],
-    "f32": [4, "decimal"],
-    "f64": [8, "decimal"],
-    "x86": [4, "address"],
-    "x64": [8, "address"],
-    "addr": [8, "address"],
-    "str": [1, "string"]
+UNSIGNED_8 = llvm_ir.IntType(8)
+UNSIGNED_16 = llvm_ir.IntType(16)
+UNSIGNED_24 = llvm_ir.IntType(24)
+UNSIGNED_32 = llvm_ir.IntType(32)
+UNSIGNED_64 = llvm_ir.IntType(64)
+UNSIGNED_128 = llvm_ir.IntType(128)
+UNSIGNED_256 = llvm_ir.IntType(256)
+FLOAT_32 = llvm_ir.FloatType()
+FLOAT_64 = llvm_ir.DoubleType()
+CHAR = llvm_ir.IntType(8)
+BOOLEAN = llvm_ir.IntType(1)
+VOID = llvm_ir.VoidType()
+
+TYPES_WITH_LLTYPES = {
+    "u8": UNSIGNED_8,
+    "u16": UNSIGNED_16,
+    "u24": UNSIGNED_24,
+    "u32": UNSIGNED_32,
+    "u64": UNSIGNED_64,
+    "u128": UNSIGNED_128,
+    "u256": UNSIGNED_256,
+    "f32": FLOAT_32,
+    "f64": FLOAT_64,
+    "chr": CHAR,
+    "bool": BOOLEAN,
+    "void": VOID
 }
-TYPES = list(TYPES_SIZES.keys())
+
+TYPES = list(TYPES_WITH_LLTYPES.keys())
 
 # Alphabet
 AL_LETTERS = "abcdefghijklmnopqrstuvwxyz"
@@ -253,18 +270,6 @@ def decimal_to_bytes(nb: float) -> list[int]:
     else: byte_array = struct.pack('d', nb)
     return list(byte_array)
 
-"""def get_stack_used_size(stack:dict) -> int:
-    used_size = 0
-    for element in stack["elements"]:
-        used_size += element["size"]
-    return used_size
-
-def get_memory_used_size(memory:dict) -> int:
-    used_size = 0
-    for element in memory["elements"].values():
-        used_size += element["size"] * element["lenght"]
-    return used_size"""
-
 def bytes_to_operator(size:int):
     if size == 1: operator = "byte"
     elif size == 2: operator = "word"
@@ -309,6 +314,9 @@ def is_a_stack(token:any) -> bool:
 def is_a_segment(token:any) -> bool:
     return isinstance(token, Block) and token.kind == "segment"
 
+def is_options(token:any) -> bool:
+    return isinstance(token, Block) and token.kind == "options"
+
 def is_a_token(token:any) -> bool:
     return isinstance(token, Token)
 
@@ -316,3 +324,20 @@ def are_tokens(tokens:list) -> bool:
     for token in tokens:
         if not is_a_token(token): return False
     return True
+
+def verify_tokens_types(pairs:dict[Token, str]):
+    for token, type in pairs.items():
+        if not token.verify_type(type): return False
+    return True
+
+def verify_blocks_types(pairs:dict[Block, str]):
+    for block, kind in pairs.items():
+        if block.kind != kind: return False
+    return True
+
+def pres_token(tokens:list[Token], index:int) -> Token: return utils.get_item(tokens, index, Token("", "unknown"))
+
+def pres_block(blocks:list[Token], index:int) -> Block: return utils.get_item(blocks, index, Block(""))
+
+def get_type_from_token(token:Token) -> llvm_ir.Type:
+    return TYPES_WITH_LLTYPES[token.token_string]

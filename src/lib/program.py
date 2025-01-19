@@ -1,13 +1,18 @@
+import llvmlite as llvm
+import llvmlite.ir as llvm_ir
 import lib.fasm as fasm
 import lib.memory as memory
 import lib.stack as stack
+import lib.sourcecode as sourcecode
 import os
 
 class Program():
-    def __init__(self, sourcepath:str, asm:fasm.Program, id:str):
+    def __init__(self, sourcepath:str, sourcecode:sourcecode.SourceCode, id:str):
         self.sourcepath = sourcepath
+        self.sourcecode = sourcecode
+        self.content = self.sourcecode.content
         self.relpath = os.path.relpath(self.sourcepath)
-        self.asm = asm
+        self.module = llvm_ir.Module(self.relpath)
         self.id = id
         self.line = None
         self.actual_memory:memory.Memory = None

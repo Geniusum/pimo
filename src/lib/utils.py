@@ -30,7 +30,21 @@ def get_item_safe(list:list, index:int):
     if index + 1 > len(list): return ""
     return list[index]
 
+def get_item(list:list, index:int, default:any) -> any:
+    try: return list[index]
+    except: return default
+
 def multi_replace(s:str, replaces:dict):
     for key, value in replaces.items():
         s = s.replace(key, value)
     return s
+
+def remove_empty_on_list_str(list_str:list[str]) -> list[str]:
+    for element in list_str:
+        if element.strip() == "": list_str.remove(element)
+    return list_str
+
+def remove_empty_on_list_list(list:list[list]) -> list[list]:
+    for element in list:
+        if not len(element): list.remove(element)
+    return list
