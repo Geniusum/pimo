@@ -250,6 +250,8 @@ class Compiler():
                         self.raise_exception(self.InvalidInstructionContext, "The function don't returns a void value.")
                     builder = llvm_ir.IRBuilder(inner)
                     builder.ret_void()
+                    continue
+                
             else:
                 self.raise_exception(self.InvalidInstruction)
     
