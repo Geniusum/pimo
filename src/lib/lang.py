@@ -68,6 +68,7 @@ CHAR = ir.IntType(8)
 BOOLEAN = ir.IntType(1)
 VOID = ir.VoidType()
 VOID_PTR = ir.IntType(8).as_pointer()
+NULL_PTR = ir.Constant(VOID_PTR, 0)
 
 TYPES_WITH_LLTYPES = {
     "u8": UNSIGNED_8,
@@ -81,7 +82,9 @@ TYPES_WITH_LLTYPES = {
     "f64": FLOAT_64,
     "chr": CHAR,
     "bool": BOOLEAN,
-    "void": VOID
+    "void": VOID,
+    "int": UNSIGNED_32,
+    "dec": FLOAT_64
 }
 
 TYPES = list(TYPES_WITH_LLTYPES.keys())
@@ -111,6 +114,8 @@ DefaultTokens = {
     "unknown", "name"
 }
 L_DefaultTokens = list(DefaultTokens)
+
+LITERAL_TOKEN_TYPES = ["integer", "decimal", "boolean", "string"]
 
 
 #####################

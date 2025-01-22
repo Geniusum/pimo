@@ -262,8 +262,11 @@ class Compiler():
                     value_token = s_arguments[0]
                     if not self.verify_literal_value_type(value_token):
                         self.raise_exception(self.InvalidInstructionSyntax, "Not a valid literal value type.")
-                    value = values.LiteralValue(value_token, builder)
-                    builder.ret(value.value)
+                    value = values.LiteralValue(self, value_token, builder)
+                    to_return = builder.alloca(ir.PointerType(lang.UNSIGNED_8))
+                    builder.store(value.value, to_return)
+                    loaded = builder.load(to_return)
+                    builder.ret(builderloaded)
                 elif not len(s_arguments):
                     if str(function.function_type.return_type) != "void":
                         self.raise_exception(self.InvalidInstructionContext, "The function don't returns a void value.")
@@ -306,6 +309,6 @@ class Compiler():
         ...  # TODO
     
     def verify_literal_value_type(self, token:lang.Token):
-        return token.token_type.lower() in ["integer", "decimal", "boolean", "string"]
+        return lang.is_a_stack(token) or (lang.is_a_token(token) and token.token_type.lower() in lang.LITERAL_TOKEN_TYPES)
 
     def get_llvm_module(self) -> ir.Module: return self.running_programs[-1].module
