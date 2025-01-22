@@ -1,5 +1,5 @@
 import llvmlite as llvm
-import llvmlite.ir as llvm_ir
+import llvmlite.ir as ir
 import llvmlite.binding as llvm_bindings
 import lib.logger as logger
 import lib.lang as lang
@@ -8,12 +8,15 @@ import lib.program as program
 import lib.memory as memory
 import lib.stack as stack
 import lib.info as info
+import lib.values as values
 import random, os, platform
 
 class Compiler():
     class InvalidInstructionSyntax(BaseException): ...
+    class InvalidMacro(BaseException): ...
     class EmptySegment(BaseException): ...
     class InvalidInstructionContext(BaseException): ...
+    class InvalidPreprocessorCommand(BaseException): ...
     class InvalidInstruction(BaseException): ...
 
     def __init__(self, pimo_instance):
@@ -65,8 +68,17 @@ class Compiler():
 
         for line in segments:
             tokens:list[lang.Token] = line["tokens"]
+            line_nb = line["line"]
 
             if not tokens: continue
+
+            program.set_line(line_nb)
+
+            for token in tokens:
+                if isinstance(token, lang.Block): continue
+                try: program.set_line(token.line)
+                except: pass
+                else: break
             
             if tokens[0].verify("operator", lang.HASHTAG):
                 if not len(tokens) >= 2:
@@ -170,16 +182,17 @@ class Compiler():
     
     def check_instructions(self, blocks:list, inner:any=None):
         program = self.running_programs[-1]
-        module:llvm_ir.Module = program.module
+        module:ir.Module = program.module
 
         instructions = lang.split_tokens(blocks, "delimiter", lang.SEMICOLON)
 
-        inner_is_block = isinstance(inner, llvm_ir.Block)
+        inner_is_block = isinstance(inner, ir.Block)
 
         if inner_is_block:
             if not len(utils.remove_empty_on_list_list(instructions)):
                 self.raise_exception(self.EmptySegment)
-            function:llvm_ir.Function = inner.function
+            function:ir.Function = inner.function
+            builder = ir.IRBuilder(inner)
 
         for instruction_ in instructions:
             tokens:list[lang.Token] = instruction_
@@ -237,27 +250,32 @@ class Compiler():
                         self.raise_exception(self.InvalidInstructionSyntax, "Arguments syntax : <type> <name>")
                     arguments[arg_name_token] = lang.get_type_from_token(arg_type_token)
                 has_segment = lang.is_a_segment(segment_block)
-                func_type = llvm_ir.FunctionType(func_ret_type, arguments.values())
-                func = llvm_ir.Function(module, func_type, func_name)
+                func_type = ir.FunctionType(func_ret_type, arguments.values())
+                func = ir.Function(module, func_type, func_name)
                 if has_segment:
                     entry = func.append_basic_block("entry")
                     self.check_instructions(segment_block.elements, entry)
             elif instruction.verify("instruction", "return"):
                 if not inner_is_block:
                     self.raise_exception(self.InvalidInstructionContext, "Only in functions.")
-                if not len(s_arguments):
+                if len(s_arguments) == 1:
+                    value_token = s_arguments[0]
+                    if not self.verify_literal_value_type(value_token):
+                        self.raise_exception(self.InvalidInstructionSyntax, "Not a valid literal value type.")
+                    value = values.LiteralValue(value_token, builder)
+                    builder.ret(value.value)
+                elif not len(s_arguments):
                     if str(function.function_type.return_type) != "void":
                         self.raise_exception(self.InvalidInstructionContext, "The function don't returns a void value.")
-                    builder = llvm_ir.IRBuilder(inner)
                     builder.ret_void()
-                    continue
-                # TODO: Expression, replace stack
+                else:
+                    self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
             else:
                 self.raise_exception(self.InvalidInstruction)
     
     def compile(self, segments:list[lang.Token], blocks:list[lang.Block], program:program.Program=None):
         if not program: program = self.main_program
-        module:llvm_ir.Module = program.module
+        module:ir.Module = program.module
 
         module.triple = self.get_target_triple()  # TODO: Changeable
 
@@ -266,7 +284,7 @@ class Compiler():
             "directory": os.path.dirname(program.relpath),
         })
         di_compile_unit = module.add_debug_info("DICompileUnit", {
-            "language": llvm_ir.DIToken("DW_LANG_Pimo"),
+            "language": ir.DIToken("DW_LANG_Pimo"),
             "file": di_file,
             "producer": f"Pimo {info.PIMO_VERSION} by {info.PIMO_PRODUCER}",
             "runtimeVersion": 2,
@@ -286,5 +304,8 @@ class Compiler():
         self.check_instructions(blocks)
 
         ...  # TODO
+    
+    def verify_literal_value_type(self, token:lang.Token):
+        return token.token_type.lower() in ["integer", "decimal", "boolean", "string"]
 
-    def get_llvm_module(self) -> llvm_ir.Module: return self.running_programs[-1].module
+    def get_llvm_module(self) -> ir.Module: return self.running_programs[-1].module

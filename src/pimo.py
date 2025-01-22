@@ -185,7 +185,7 @@ class Main():
             self.end()
 
         self.logger.log("Generating binary file...", "work")
-        try: self.execute_command(f"clang {self.obj_output} -o {self.output}")
+        try: self.execute_command(f"clang {self.obj_output} -o {self.output} -Woverride-module")
         except: pass
         if os.path.exists(self.output):
             self.logger.log(f"Binary file generated at the path `{self.obj_output}`.", "success")

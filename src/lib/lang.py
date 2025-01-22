@@ -1,5 +1,5 @@
 import llvmlite as llvm
-import llvmlite.ir as llvm_ir
+import llvmlite.ir as ir
 import lib.utils as utils
 from lib.enum import *
 import struct
@@ -55,18 +55,19 @@ REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
 INSTRUCTIONS = ["exit", "write", "ini", "func", "return"]
 
 # Types
-UNSIGNED_8 = llvm_ir.IntType(8)
-UNSIGNED_16 = llvm_ir.IntType(16)
-UNSIGNED_24 = llvm_ir.IntType(24)
-UNSIGNED_32 = llvm_ir.IntType(32)
-UNSIGNED_64 = llvm_ir.IntType(64)
-UNSIGNED_128 = llvm_ir.IntType(128)
-UNSIGNED_256 = llvm_ir.IntType(256)
-FLOAT_32 = llvm_ir.FloatType()
-FLOAT_64 = llvm_ir.DoubleType()
-CHAR = llvm_ir.IntType(8)
-BOOLEAN = llvm_ir.IntType(1)
-VOID = llvm_ir.VoidType()
+UNSIGNED_8 = ir.IntType(8)
+UNSIGNED_16 = ir.IntType(16)
+UNSIGNED_24 = ir.IntType(24)
+UNSIGNED_32 = ir.IntType(32)
+UNSIGNED_64 = ir.IntType(64)
+UNSIGNED_128 = ir.IntType(128)
+UNSIGNED_256 = ir.IntType(256)
+FLOAT_32 = ir.FloatType()
+FLOAT_64 = ir.DoubleType()
+CHAR = ir.IntType(8)
+BOOLEAN = ir.IntType(1)
+VOID = ir.VoidType()
+VOID_PTR = ir.IntType(8).as_pointer()
 
 TYPES_WITH_LLTYPES = {
     "u8": UNSIGNED_8,
@@ -339,5 +340,5 @@ def pres_token(tokens:list[Token], index:int) -> Token: return utils.get_item(to
 
 def pres_block(blocks:list[Token], index:int) -> Block: return utils.get_item(blocks, index, Block(""))
 
-def get_type_from_token(token:Token) -> llvm_ir.Type:
+def get_type_from_token(token:Token) -> ir.Type:
     return TYPES_WITH_LLTYPES[token.token_string]

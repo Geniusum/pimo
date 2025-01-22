@@ -1,60 +1,81 @@
-class StackByte():
-    def __init__(self, position:int):
-        self.position = position
-
-class StackElement():
-    def __init__(self, size:int, token_type:str):
-        self.size = size
-        self.token_type = token_type
-        self.bytes:list[StackByte] = []
+import llvmlite as llvm
+import llvmlite.ir as ir
+import lib.lang as lang
 
 class Stack():
-    def __init__(self, size:int, id:str):
+    def __init__(self, block:ir.Block, size:int, id:str):
         self.size = size
         self.id = id
-        self.elements:list[StackElement] = []
+        self.element_type = ir.ArrayType(lang.UNSIGNED_64, 2)
+        self.type = ir.global_context.get_identified_type("Stack")
+        self.type.set_body(
+            ir.ArrayType(self.type, self.size),
+            lang.UNSIGNED_32,
+            lang.UNSIGNED_32
+        )
+        self.block = block
+        self.module = self.block.module
 
-    def enough_size(self, size:int) -> bool:
-        return not self.get_free_nb() < size
+        self.define_push()
+        self.define_pop()
 
-    def push(self, *args):
-        self.elements.append(StackElement(*args))
-        for i in range(self.elements[-1].size):
-            self.elements[-1].bytes.append(StackByte(self.get_free_positions()[0]))
-        return self.elements[-1]
+    def define_push(self):
+        push_func_type = ir.FunctionType(ir.VoidType(), [self.stack_type.as_pointer(), lang.VOID_PTR])
+        push_func = ir.Function(self.module, push_func_type, name=f"push_{id}")
 
-    def pop(self):
-        return self.elements.pop()
-    
-    def get_used_bytes(self) -> list[StackByte]:
-        used_bytes = []
-        for element in self.elements: used_bytes += element.bytes
-        return used_bytes
-    
-    def get_used_nb(self) -> int:
-        used_nb = 0
-        for element in self.elements: used_nb += len(element.bytes)
-        return used_nb
-    
-    def get_used_positions(self) -> list[int]:
-        used_positions = []
-        used_bytes = self.get_used_bytes()
-        for byte in used_bytes: used_positions.append(byte.position)
-        return used_positions
+        push_block = push_func.append_basic_block(name="entry")
+        push_builder = ir.IRBuilder(push_block)
 
-    def get_free_bytes(self) -> list[StackByte]:
-        free_bytes = []
-        used_positions = self.get_used_positions()
-        for byte_position in range(self.size):
-            if not byte_position in used_positions: free_bytes.append(StackByte(byte_position))
-        return free_bytes
-    
-    def get_free_positions(self) -> list[int]:
-        free_positions = []
-        free_bytes = self.get_free_bytes()
-        for byte in free_bytes: free_positions.append(byte.position)
-        return free_positions
-    
-    def get_free_nb(self) -> int: return self.size - self.get_used_nb()
-    
-    def with_prefix(self) -> str: return "stack_" + self.id
+        stack_ptr, value_ptr = push_func.args
+
+        top_ptr = push_builder.gep(stack_ptr, [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 1)], name="top_ptr")
+        size_ptr = push_builder.gep(stack_ptr, [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 2)], name="size_ptr")
+
+        top = push_builder.load(top_ptr, name="top")
+        size = push_builder.load(size_ptr, name="size")
+
+        is_full = push_builder.icmp_unsigned("==", top, size, name="is_full")
+        with push_builder.if_else(is_full) as (then, otherwise):
+            with then:
+                push_builder.ret_void()
+
+            with otherwise:
+                element_ptr = push_builder.gep(stack_ptr, [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 0), top], name="element_ptr")
+                element_ptr = push_builder.bitcast(element_ptr, lang.VOID_PTR.as_pointer(), name="cast_element_ptr")
+
+                push_builder.store(value_ptr, element_ptr)
+
+                new_top = push_builder.add(top, ir.Constant(lang.UNSIGNED_32, 1), name="new_top")
+                push_builder.store(new_top, top_ptr)
+
+        push_builder.ret_void()
+
+        return push_func
+
+    def define_pop(self):
+        pop_func_type = ir.FunctionType(lang.VOID_PTR, [self.type.as_pointer()])
+        pop_func = ir.Function(self.module, pop_func_type, name="pop")
+
+        pop_block = pop_func.append_basic_block(name="entry")
+        pop_builder = ir.IRBuilder(pop_block)
+
+        stack_ptr = pop_func.args[0]
+
+        top_ptr = pop_builder.gep(stack_ptr, [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 1)], name="top_ptr")
+        top = pop_builder.load(top_ptr, name="top")
+
+        is_empty = pop_builder.icmp_unsigned("==", top, ir.Constant(lang.UNSIGNED_32, 0), name="is_empty")
+        with pop_builder.if_else(is_empty) as (then, otherwise):
+            with then:
+                pop_builder.ret(lang.VOID_PTR.null())
+
+            with otherwise:
+                new_top = pop_builder.sub(top, ir.Constant(lang.UNSIGNED_32, 1), name="new_top")
+                pop_builder.store(new_top, top_ptr)
+
+                element_ptr = pop_builder.gep(stack_ptr, [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 0), new_top], name="element_ptr")
+                element_ptr = pop_builder.bitcast(element_ptr, lang.VOID_PTR.as_pointer(), name="cast_element_ptr")
+
+                pop_builder.ret(element_ptr)
+
+        return pop_func

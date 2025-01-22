@@ -1,5 +1,5 @@
 import llvmlite as llvm
-import llvmlite.ir as llvm_ir
+import llvmlite.ir as ir
 import lib.fasm as fasm
 import lib.memory as memory
 import lib.stack as stack
@@ -12,7 +12,7 @@ class Program():
         self.sourcecode = sourcecode
         self.content = self.sourcecode.content
         self.relpath = os.path.relpath(self.sourcepath)
-        self.module = llvm_ir.Module(self.relpath)
+        self.module = ir.Module(self.relpath)
         self.id = id
         self.line = None
         self.actual_memory:memory.Memory = None
