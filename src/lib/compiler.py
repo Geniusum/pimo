@@ -266,7 +266,7 @@ class Compiler():
                     to_return = builder.alloca(ir.PointerType(lang.UNSIGNED_8))
                     builder.store(value.value, to_return)
                     loaded = builder.load(to_return)
-                    builder.ret(builderloaded)
+                    builder.ret(loaded)
                 elif not len(s_arguments):
                     if str(function.function_type.return_type) != "void":
                         self.raise_exception(self.InvalidInstructionContext, "The function don't returns a void value.")
