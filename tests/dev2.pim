@@ -1,5 +1,6 @@
 func u8 add(u8 a, u8 b);
 
 func u8 main() {
-    return 2907:u8;
+    return 12;
+    return 13;
 };
