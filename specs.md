@@ -1,2 +1,3 @@
-- `extern` and `intern` keywords
-    - 
+- [ ] Advanced types
+- [ ] Names
+- [ ] Stack operators

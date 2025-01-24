@@ -129,6 +129,7 @@ class Parser():
                 next_part = utils.get_item_safe(parts, index + 1)
                 next_part_2 = utils.get_item_safe(parts, index + 2)
                 next_part_3 = utils.get_item_safe(parts, index + 3)
+                next_part_4 = utils.get_item_safe(parts, index + 4)
 
                 if part + next_part == lang.DOUBLE_SLASH:
                     break
@@ -142,6 +143,11 @@ class Parser():
                         self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.InvalidStringReference)
                     token = lang.Token(string, "string")
                     parts_to_skip = 1
+                    parts_to_skip = 2
+                elif lang.is_a_decimal(part + next_part + next_part_2) and next_part_3 == lang.COLON and lang.is_a_type(next_part_4):
+                    token = lang.Token(part + next_part + next_part_2)
+                    token.type = lang.get_type_from_token(lang.Token(next_part_4, "type"))
+                    parts_to_skip = 4
                 elif lang.is_a_decimal(part + next_part + next_part_2):
                     token = lang.Token(part + next_part + next_part_2)
                     parts_to_skip = 2
@@ -171,10 +177,15 @@ class Parser():
                     token.size = int(part)
                     parts_to_skip = 2
                 elif (
-                    lang.is_an_integer(part) or lang.is_a_decimal(part) or lang.is_a_valid_name(part) or lang.is_a_boolean(part) or part == lang.CLOSE_HOOK
+                    lang.is_an_integer(part) or lang.is_a_valid_name(part) or lang.is_a_boolean(part) or part == lang.CLOSE_HOOK
                 ) and next_part == lang.COLON and lang.is_a_type(next_part_2):
                     token = lang.Token(part)
                     token.type = lang.get_type_from_token(lang.Token(next_part_2, "type"))
+                elif part + next_part == lang.DOT_PERCENTAGE:
+                    token = lang.Token(lang.DOT_PERCENTAGE, "operator")
+                    parts_to_skip = 1
+                elif part + next_part + next_part_2 == lang.DOT_DOT_PERCENTAGE:
+                    token = lang.Token(lang.DOT_DOT_PERCENTAGE, "operator")
                     parts_to_skip = 2
                 else:
                     token = lang.Token(part)

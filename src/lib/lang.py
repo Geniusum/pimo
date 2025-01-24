@@ -38,11 +38,15 @@ DOUBLE_SLASH = "//"
 SLASH_STAR = "/*"
 STAR_SLASH = "*/"
 DOUBLE_COLON = "::"
+DOT_PERCENTAGE = ".%"
+
+# Three chars
+DOT_DOT_PERCENTAGE = "..%"
 
 # Operators
 OPERATORS = [
-             HASHTAG, DOUBLE_HASHTAG, TILDE, PERCENTAGE, COLON, PERCENTAGE, EQUAL,
-             PLUS  # Stack operators
+             HASHTAG, DOUBLE_HASHTAG, TILDE, COLON, PERCENTAGE, EQUAL,
+             PLUS, DOT_PERCENTAGE, DOT_DOT_PERCENTAGE  # Stack operators
             ]
 
 # Delimiters
@@ -52,7 +56,7 @@ DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSE_HOOK, OPEN_CURLY_BRACE, CLOSE_C
 REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
 
 # Instructions
-INSTRUCTIONS = ["exit", "write", "ini", "func", "return"]
+INSTRUCTIONS = ["ini", "func", "return"]
 
 # Types
 UNSIGNED_8 = ir.IntType(8)
@@ -83,8 +87,10 @@ TYPES_WITH_LLTYPES = {
     "chr": CHAR,
     "bool": BOOLEAN,
     "void": VOID,
+    # Aliases :
     "int": UNSIGNED_32,
-    "dec": FLOAT_64
+    "dec": FLOAT_64,
+    "byte": UNSIGNED_8
 }
 
 TYPES = list(TYPES_WITH_LLTYPES.keys())

@@ -257,19 +257,28 @@ class Compiler():
                     self.check_instructions(segment_block.elements, entry)
             elif instruction.verify("instruction", "return"):
                 if not inner_is_block:
-                    self.raise_exception(self.InvalidInstructionContext, "Only in functions.")
+                    self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
                 if len(s_arguments) == 1:
                     value_token = s_arguments[0]
                     if not self.verify_literal_value_type(value_token):
                         self.raise_exception(self.InvalidInstructionSyntax, "Not a valid literal value type.")
                     value = values.LiteralValue(self, value_token, builder)
-                    builder.ret(value.value)
+                    try: builder.ret(value.value)
+                    except AssertionError:
+                        self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
                 elif not len(s_arguments):
                     if str(function.function_type.return_type) != "void":
                         self.raise_exception(self.InvalidInstructionContext, "The function don't returns a void value.")
                     builder.ret_void()
+                    try: builder.ret(value.value)
+                    except AssertionError:
+                        self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
                 else:
                     self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
+            elif instruction.verify("instruction", "ini"):
+                if not inner_is_block:
+                    self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
+                ...  # TODO
             else:
                 self.raise_exception(self.InvalidInstruction)
     

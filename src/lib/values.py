@@ -6,6 +6,7 @@ import lib.stack as stack
 class LiteralValue():
     class InvalidElementType(BaseException): ...
     class InvalidLiteralValueType(BaseException): ...
+    class InvalidOperator(BaseException): ...
 
     def __init__(self, compiler, token:lang.Token, builder:ir.IRBuilder):
         self.compiler = compiler
@@ -69,6 +70,13 @@ class LiteralValue():
                 if self.compiler.verify_literal_value_type(element):
                     value = LiteralValue(self.compiler, element, self.builder)
                     self.stack.push(value.value)
+                elif lang.is_a_token(element) and element.verify_type("operator"):
+                    if element.verify(lang.DOT_PERCENTAGE, "operator"):
+                        self.stack.push_top_ptr()
+                    elif element.verify(lang.DOT_DOT_PERCENTAGE, "operator"):
+                        self.stack.push_base_ptr()
+                    else:
+                        self.compiler.raise_exception(self.InvalidOperator)
                 else:
                     self.compiler.raise_exception(self.InvalidLiteralValueType)
             conv_type = lang.UNSIGNED_8.as_pointer()

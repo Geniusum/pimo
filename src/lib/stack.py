@@ -28,14 +28,19 @@ class Stack():
             name=f"stacktop_{id}"
         )
         self.builder.store(ir.Constant(lang.UNSIGNED_32, 0), self.top_ptr)
-        self.function = self.builder.function
-
+        
         self.size_ptr = self.builder.gep(
             self.stack,
             [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 2)],
             name=f"stacksize_{id}"
         )
         self.builder.store(ir.Constant(lang.UNSIGNED_32, self.size), self.size_ptr)
+
+        self.base_ptr = self.builder.gep(
+            self.stack,
+            [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 0)],
+            name=f"stackbase_{self.id}"
+        )
     
     def push(self, value:ir.Value):
         if not value.type.is_pointer:
@@ -44,6 +49,12 @@ class Stack():
             value = alloca
         cast_value = self.builder.bitcast(value, lang.VOID_PTR)
         return self.builder.call(self.push_function, [self.stack, cast_value])
+
+    def push_top_ptr(self):
+        self.push(self.builder.load(self.top_ptr))
+    
+    def push_base_ptr(self):
+        self.push(self.builder.load(self.base_ptr))
         
     def pop(self):
         return self.builder.call(self.pop_function, [self.stack])

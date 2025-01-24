@@ -1,0 +1,4 @@
+ini u8 var1 = [2];  // var1 -> u8 2 (top of the stack)
+ini u8* var2 = [2 .%];  // var2 -> u8* 2 (top of the stack)
+ini u8* var3 = [2 3 ..%];  // var3 -> u8* 2 (base of the stack)
+ini u8 var4 = [2 3 ..% %];  // var4 -> u8 2 (base of the stack)
