@@ -1,3 +1,6 @@
 *.pyc
 *.pyo
+*.o
+*.ll
+*.s
 venv/

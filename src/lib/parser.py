@@ -160,7 +160,7 @@ class Parser():
                     parts_to_skip = 3
                 elif lang.is_an_integer(part) and next_part == lang.COLON and next_part_2 == lang.OPEN_HOOK:
                     token = lang.Token(lang.OPEN_HOOK, "delimiter")
-                    token.stack_size = int(part)
+                    token.size = int(part)
                     parts_to_skip = 2
                 elif lang.is_a_valid_name(part) and lang.is_an_upper_name(part) and next_part + next_part_2 == lang.DOUBLE_COLON and lang.is_a_valid_name(next_part_3) and lang.is_a_lower_name(next_part_3):
                     token = lang.Token(next_part_3, "name")
@@ -169,6 +169,12 @@ class Parser():
                 elif lang.is_an_integer(part) and next_part == lang.COLON and next_part_2 == lang.PERCENTAGE:
                     token = lang.Token(lang.PERCENTAGE, "operator")
                     token.size = int(part)
+                    parts_to_skip = 2
+                elif (
+                    lang.is_an_integer(part) or lang.is_a_decimal(part) or lang.is_a_valid_name(part) or lang.is_a_boolean(part) or part == lang.CLOSE_HOOK
+                ) and next_part == lang.COLON and lang.is_a_type(next_part_2):
+                    token = lang.Token(part)
+                    token.type = lang.get_type_from_token(lang.Token(next_part_2, "type"))
                     parts_to_skip = 2
                 else:
                     token = lang.Token(part)
@@ -195,6 +201,8 @@ class Parser():
             for token_index, token in enumerate(tokens):
                 if token.verify("delimiter", lang.OPEN_HOOK):
                     stack_block = lang.Block("stack", active_block, token)
+                    try: stack_block.size = token.size
+                    except: pass
                     active_block.elements.append(stack_block)
                     active_block = stack_block
                 elif token.verify("delimiter", lang.OPEN_CURLY_BRACE):
@@ -210,7 +218,9 @@ class Parser():
                         self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-existant block.")
                     if active_block.kind != "stack":
                         self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-stack block.")
-
+                    
+                    try: active_block.type = token.type
+                    except: pass
                     active_block = active_block.parent
                 elif token.verify("delimiter", lang.CLOSE_CURLY_BRACE):
                     if active_block == root:

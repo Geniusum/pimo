@@ -263,10 +263,7 @@ class Compiler():
                     if not self.verify_literal_value_type(value_token):
                         self.raise_exception(self.InvalidInstructionSyntax, "Not a valid literal value type.")
                     value = values.LiteralValue(self, value_token, builder)
-                    to_return = builder.alloca(ir.PointerType(lang.UNSIGNED_8))
-                    builder.store(value.value, to_return)
-                    loaded = builder.load(to_return)
-                    builder.ret(loaded)
+                    builder.ret(value.value)
                 elif not len(s_arguments):
                     if str(function.function_type.return_type) != "void":
                         self.raise_exception(self.InvalidInstructionContext, "The function don't returns a void value.")

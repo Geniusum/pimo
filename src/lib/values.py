@@ -5,7 +5,7 @@ import lib.stack as stack
 
 class LiteralValue():
     class InvalidElementType(BaseException): ...
-    class invalidLiteralValueType(BaseException): ...
+    class InvalidLiteralValueType(BaseException): ...
 
     def __init__(self, compiler, token:lang.Token, builder:ir.IRBuilder):
         self.compiler = compiler
@@ -24,21 +24,29 @@ class LiteralValue():
                 integer = int(self.token_string)
                 self.size = lang.how_much_bytes(integer)
                 self.type = ir.IntType(self.size * 8)
+                try: self.type = self.token.type
+                except: pass
                 self.value = ir.Constant(self.type, integer)
             elif self.token.verify_type("decimal"):
                 decimal = float(self.token_string)
                 self.size = lang.how_much_bytes_decimal(decimal)
                 self.type = lang.FLOAT_32 if self.size == 4 else lang.FLOAT_64
+                try: self.type = self.token.type
+                except: pass
                 self.value = ir.Constant(self.type, decimal)
             elif self.token.verify_type("boolean"):
                 boolean = 1 if self.token_string.lower() == "true" else 0
                 self.size = 1
                 self.type = lang.BOOLEAN
+                try: self.type = self.token.type
+                except: pass
                 self.value = ir.Constant(self.type, boolean)
             elif self.token.verify_type("string"):
                 string = self.token_string
                 self.size = len(string)
                 self.type = ir.ArrayType(lang.CHAR, self.size)
+                try: self.type = self.token.type
+                except: pass
                 char_constants = [ir.Constant(lang.CHAR, ord(c)) for c in string]
                 self.value = ir.Constant(self.type, char_constants)
 
@@ -49,7 +57,7 @@ class LiteralValue():
                 return
             # TODO: Names
             else:
-                self.compiler.raise_exception(self.invalidLiteralValueType)
+                self.compiler.raise_exception(self.InvalidLiteralValueType)
             self.value_ptr = self.builder.alloca(self.type)
             self.builder.store(self.value, self.value_ptr)
         elif lang.is_a_stack(self.token):
@@ -62,7 +70,12 @@ class LiteralValue():
                     value = LiteralValue(self.compiler, element, self.builder)
                     self.stack.push(value.value)
                 else:
-                    self.compiler.raise_exception(self.invalidLiteralValueType)
-                self.value = self.stack.pop()
+                    self.compiler.raise_exception(self.InvalidLiteralValueType)
+            conv_type = lang.UNSIGNED_8.as_pointer()
+            try: conv_type = self.token.type.as_pointer()
+            except: pass
+            result = self.stack.pop()
+            typed_result = self.builder.bitcast(result, conv_type)
+            self.value = self.builder.load(typed_result)
         else:
             self.compiler.raise_exception(self.InvalidElementType)

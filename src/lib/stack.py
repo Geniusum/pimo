@@ -9,9 +9,9 @@ class Stack():
         self.element_type = ir.ArrayType(lang.UNSIGNED_64, 2)
         self.type = ir.global_context.get_identified_type(f"stacktype_{id}")
         self.type.set_body(
-            ir.ArrayType(self.type, self.size),
-            lang.UNSIGNED_32,
-            lang.UNSIGNED_32
+            ir.ArrayType(lang.VOID_PTR, self.size),
+            lang.UNSIGNED_32,  # Top
+            lang.UNSIGNED_32   # Size
         )
         self.builder = builder
         self.block = self.builder.block
@@ -21,31 +21,36 @@ class Stack():
         self.pop_function = self.define_pop()
 
         self.stack = self.builder.alloca(self.type, self.size, f"stack_{id}")
-        self.top_ptr = self.builder.gep(self.stack, [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 1)], name=f"stacktop_{id}")
+
+        self.top_ptr = self.builder.gep(
+            self.stack,
+            [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 1)],
+            name=f"stacktop_{id}"
+        )
         self.builder.store(ir.Constant(lang.UNSIGNED_32, 0), self.top_ptr)
+        self.function = self.builder.function
+
+        self.size_ptr = self.builder.gep(
+            self.stack,
+            [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 2)],
+            name=f"stacksize_{id}"
+        )
+        self.builder.store(ir.Constant(lang.UNSIGNED_32, self.size), self.size_ptr)
     
     def push(self, value:ir.Value):
-        self.builder.call(self.push_function, [self.stack, self.builder.bitcast(value, lang.VOID_PTR)])
+        if not value.type.is_pointer:
+            alloca = self.builder.alloca(value.type)
+            self.builder.store(value, alloca)
+            value = alloca
+        cast_value = self.builder.bitcast(value, lang.VOID_PTR)
+        return self.builder.call(self.push_function, [self.stack, cast_value])
         
     def pop(self):
-        popped_value_ptr = self.builder.call(self.pop_function, [self.stack])
-
-        null_ptr = ir.Constant(lang.VOID_PTR, None)
-        is_null = self.builder.icmp_unsigned("==", popped_value_ptr, null_ptr)
-
-        result_value = self.builder.alloca(lang.VOID_PTR)
-
-        with self.builder.if_else(is_null) as (then, otherwise):
-            with then:
-                self.builder.store(null_ptr, result_value)
-            with otherwise:
-                self.builder.store(popped_value_ptr, result_value)
-
-        return self.builder.load(result_value)
+        return self.builder.call(self.pop_function, [self.stack])
 
     def define_push(self):
         push_func_type = ir.FunctionType(ir.VoidType(), [self.type.as_pointer(), lang.VOID_PTR])
-        push_func = ir.Function(self.module, push_func_type, name=f"push_{id}")
+        push_func = ir.Function(self.module, push_func_type, name=f"push_{self.id}")
 
         push_block = push_func.append_basic_block(name="entry")
         push_builder = ir.IRBuilder(push_block)
@@ -91,19 +96,22 @@ class Stack():
         is_empty = pop_builder.icmp_unsigned("==", top, ir.Constant(lang.UNSIGNED_32, 0), name="is_empty")
         with pop_builder.if_else(is_empty) as (then, otherwise):
             with then:
-                pop_builder.ret(lang.VOID_PTR.null)
+                pop_builder.ret(lang.NULL_PTR)
 
             with otherwise:
                 new_top = pop_builder.sub(top, ir.Constant(lang.UNSIGNED_32, 1), name="new_top")
                 pop_builder.store(new_top, top_ptr)
 
                 element_ptr = pop_builder.gep(
-                    stack_ptr, 
+                    stack_ptr,
                     [ir.Constant(lang.UNSIGNED_32, 0), ir.Constant(lang.UNSIGNED_32, 0), new_top],
                     name="element_ptr"
                 )
-                element_ptr = pop_builder.bitcast(element_ptr, lang.VOID_PTR.as_pointer(), name="cast_element_ptr")
+
+                element_ptr = pop_builder.load(element_ptr)
 
                 pop_builder.ret(element_ptr)
+        
+        pop_builder.ret(lang.NULL_PTR)
 
         return pop_func

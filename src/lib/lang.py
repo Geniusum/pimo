@@ -68,7 +68,7 @@ CHAR = ir.IntType(8)
 BOOLEAN = ir.IntType(1)
 VOID = ir.VoidType()
 VOID_PTR = ir.IntType(8).as_pointer()
-NULL_PTR = ir.Constant(VOID_PTR, 0)
+NULL_PTR = ir.Constant(VOID_PTR, None)
 
 TYPES_WITH_LLTYPES = {
     "u8": UNSIGNED_8,

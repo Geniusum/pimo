@@ -192,15 +192,16 @@ class Main():
         else:
             self.error_logger.log(f"Binary file not found, maybe due to an error.", "error")
             self.end()
-
-        self.logger.log("Generating assembly file...", "work")
-        try: self.execute_command(f"clang -S {self.llvm_output} -o {self.asm_output}")
-        except: pass
-        if os.path.exists(self.asm_output):
-            self.logger.log(f"Assembly file generated at the path `{self.asm_output}`.", "success")
-        else:
-            self.error_logger.log(f"Assembly file not found, maybe due to an error.", "error")
-            self.end()
+        
+        if self.assembly:
+            self.logger.log("Generating assembly file...", "work")
+            try: self.execute_command(f"clang -S {self.llvm_output} -o {self.asm_output}")
+            except: pass
+            if os.path.exists(self.asm_output):
+                self.logger.log(f"Assembly file generated at the path `{self.asm_output}`.", "success")
+            else:
+                self.error_logger.log(f"Assembly file not found, maybe due to an error.", "error")
+                self.end()
         
         if not self.keep_llvm:
             self.logger.log("Deleting LLVM file...", "work")
