@@ -7,6 +7,7 @@ class LiteralValue():
     class InvalidElementType(BaseException): ...
     class InvalidLiteralValueType(BaseException): ...
     class InvalidOperator(BaseException): ...
+    class InvalidArgumentSyntax(BaseException): ...
 
     def __init__(self, compiler, token:lang.Token, builder:ir.IRBuilder, scope:names.Name):
         self.compiler = compiler
@@ -61,10 +62,27 @@ class LiteralValue():
                 path = self.token_string
                 found:names.Variable = self.scope.get_from_path(path)
                 if not isinstance(found, names.Variable):
-                    self.compiler.raise_exception(self.InvalidElementType, "Need to be a variable.")
-                try: self.type = self.token.type
-                except: self.type = found.type
-                self.value = found.get_value(self.builder, self.type)
+                    options = None
+                    try: options = self.token.options
+                    except: pass
+                    if isinstance(found, names.Function) and not options is None:
+                        arguments = []
+                        found:names.Function
+                        for element in lang.split_tokens(options.elements, "delimiter", lang.COMMA):
+                            if len(element) != 1:
+                                self.compiler.raise_exception(self.InvalidArgumentSyntax)
+                            element = element[0]
+                            if not self.compiler.verify_literal_value_type(element):
+                                self.compiler.raise_exception(self.InvalidElementType)
+                            arguments.append(LiteralValue(self.compiler, element, self.builder, self.scope).value)
+                        self.value = self.builder.call(found.func, arguments)
+                        self.type = found.func.function_type.return_type
+                    else:
+                        self.compiler.raise_exception(self.InvalidElementType, "Need to be a variable or a function with arguments.")
+                else:
+                    try: self.type = self.token.type
+                    except: self.type = found.type
+                    self.value = found.get_value(self.builder, self.type)
             else:
                 self.compiler.raise_exception(self.InvalidLiteralValueType)
             self.value_ptr = self.builder.alloca(self.type)

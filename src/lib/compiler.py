@@ -17,6 +17,7 @@ class Compiler():
     class InvalidInstructionContext(BaseException): ...
     class InvalidPreprocessorCommand(BaseException): ...
     class InvalidInstruction(BaseException): ...
+    class InvalidNameCase(BaseException): ...
 
     def __init__(self, pimo_instance):
         self.pimo_instance = pimo_instance
@@ -180,6 +181,10 @@ class Compiler():
 
         return blocks
     
+    def check_inner_function(self, inner_is_block:bool):
+        if not inner_is_block:
+            self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
+
     def check_instructions(self, blocks:list, scope:names.Name, inner:any=None):
         program = self.running_programs[-1]
         module:ir.Module = program.module
@@ -211,8 +216,10 @@ class Compiler():
             if instruction.verify("instruction", "func"):
                 type_token = lang.pres_token(s_arguments, 0)
                 name_token = lang.pres_token(s_arguments, 1)
-                args_block = lang.pres_block(s_arguments, 2)
-                segment_block = lang.pres_block(s_arguments, 3)
+                args_block = None
+                try: args_block = name_token.options
+                except: pass
+                segment_block = lang.pres_block(s_arguments, 2)
                 if not (
                     lang.are_tokens([type_token, name_token]) and
                     lang.verify_tokens_types({
@@ -234,6 +241,8 @@ class Compiler():
                     self.raise_exception(self.InvalidInstructionSyntax, "Syntax : func <type> <name> (<args>, ...) {<function code>; ...};")
                 func_ret_type = lang.get_type_from_token(type_token)
                 func_name = name_token.token_string
+                if not lang.is_a_lower_name(func_name):
+                    self.raise_exception(self.InvalidInstructionSyntax, "Function names must be in lowercase.")
                 args_parts = lang.split_tokens(args_block.elements, "delimiter", lang.COMMA)
                 arguments = {}
                 for tokens in args_parts:
@@ -251,9 +260,12 @@ class Compiler():
                     arguments[arg_name_token] = lang.get_type_from_token(arg_type_token)
                 has_segment = lang.is_a_segment(segment_block)
                 func_type = ir.FunctionType(func_ret_type, arguments.values())
-                func_class = self.scope.append(func_name, names.Function, func_type)
+                func_class:names.Function = self.scope.append(func_name, names.Function, func_type, genargs=True)
                 func:ir.Function = func_class.func
+                for argument_index, argument in enumerate(func.args):
+                    argument.name = list(arguments.keys())[argument_index].token_string
                 if has_segment:
+                    func_class.gen_args()
                     try: entry = func.entry_basic_block
                     except: entry = func.append_basic_block("entry")
                     self.check_instructions(segment_block.elements, func_class, entry)
@@ -271,16 +283,46 @@ class Compiler():
                 elif not len(s_arguments):
                     if str(function.function_type.return_type) != "void":
                         self.raise_exception(self.InvalidInstructionContext, "The function don't returns a void value.")
-                    builder.ret_void()
-                    try: builder.ret(value.value)
+                    try: builder.ret_void()
                     except AssertionError:
                         self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
                 else:
                     self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
-            elif instruction.verify("instruction", "ini"):
-                if not inner_is_block:
-                    self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
-                ...  # TODO
+            elif instruction.verify_type("type"):
+                self.check_inner_function(inner_is_block)
+                d_arguments = lang.split_tokens(tokens, "operator", lang.EQUAL)
+                vartype_token = lang.pres_token(d_arguments[0], 0)
+                varname_token = lang.pres_token(d_arguments[0], 1)
+                varvalue_token = None
+                if len(d_arguments) == 2:
+                    if len(d_arguments[1]) > 1:
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    varvalue_token = lang.pres_token(d_arguments[1], 0)
+                    if not self.verify_literal_value_type(varvalue_token):
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                elif len(d_arguments) > 2:
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                if not (
+                    lang.are_tokens([vartype_token, varname_token]) and
+                    vartype_token.verify_type("type") and
+                    varname_token.verify_type("name")
+                ):
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                varname = varname_token.token_string
+                if not lang.is_a_lower_name(varname):
+                    self.raise_exception(self.InvalidNameCase, "Variable names must be in lowercase.")
+                vartype = lang.get_type_from_token(vartype_token)
+                varvalue = None
+                if not varvalue_token is None:
+                    varvalue = values.LiteralValue(self, varvalue_token, builder, scope).value
+                varvalue_ptr = builder.alloca(vartype)
+                builder.store(varvalue, varvalue_ptr)
+                var:names.Variable = scope.append(varname, names.Variable, vartype)
+                var.assign_value(builder, varvalue_ptr)
+            elif self.verify_literal_value_type(instruction):
+                if len(s_arguments):
+                    self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
+                value = values.LiteralValue(self, instruction.token_string, builder, scope)
             else:
                 self.raise_exception(self.InvalidInstruction)
     

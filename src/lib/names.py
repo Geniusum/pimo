@@ -26,10 +26,10 @@ class Name():
     def exists(self, name:str) -> bool:
         return name in self.names.keys()
     
-    def append(self, name:str, nameclass, *args):
+    def append(self, name:str, nameclass, *args, **kwargs):
         if self.exists(name):
             self.compiler.raise_exception(self.NameAlreadyTaken)
-        self.names[name] = nameclass(self, self.compiler, self.module, name, *args)
+        self.names[name] = nameclass(self, self.compiler, self.module, name, *args, **kwargs)
         return self.names[name]
 
 class GlobalScope(Name):
@@ -51,7 +51,7 @@ class Variable(Name):
         if init_value:
             self.var.initializer = init_value
         else:
-            self.var.initializer = lang.NULL_PTR
+            self.var.initializer = ir.Constant(self.type.as_pointer(), None)
         self.var.global_constant = constant
     
     def get_value(self, builder:ir.IRBuilder, type:ir.Type=None):
@@ -65,7 +65,7 @@ class Variable(Name):
         builder.store(value, self.var)
 
 class Function(Name):
-    def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.FunctionType):
+    def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.FunctionType, genargs:bool=True):
         self.parent = parent
         self.compiler = compiler
         self.id = self.compiler.generate_id()
@@ -76,6 +76,9 @@ class Function(Name):
         if self.parent.parent == self.parent and self.name == "main":
             nmid = "main"
         self.func = ir.Function(self.module, self.type, nmid)
+        if genargs: self.gen_args()
+
+    def gen_args(self):
         if len(self.func.args):
             builder = ir.IRBuilder(self.func.append_basic_block("entry"))
             for arg in self.func.args:
