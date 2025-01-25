@@ -32,6 +32,8 @@ COLON = ":"
 EQUAL = "="
 PLUS = "+"
 CARET = "^"
+BANG = "!"
+STAR = "*"
 
 # Two chars
 DOUBLE_HASHTAG = "##"
@@ -47,7 +49,7 @@ DOT_DOT_PERCENTAGE = "..%"
 # Operators
 OPERATORS = [
              HASHTAG, DOUBLE_HASHTAG, TILDE, COLON, PERCENTAGE, EQUAL, CARET, DOT,
-             PLUS, DOT_PERCENTAGE, DOT_DOT_PERCENTAGE  # Stack operators
+             PLUS, DOT_PERCENTAGE, DOT_DOT_PERCENTAGE, BANG, PERCENTAGE, "dup", STAR  # Stack operators
             ]
 
 # Delimiters

@@ -56,9 +56,15 @@ class Stack():
 
     def push_base_ptr(self):  # TODO: Fix
         self.push(self.base_ptr)
+    
+    def push_size(self):
+        self.push(self.builder.load(self.size_ptr))
 
     def pop(self):
         return self.builder.call(self.pop_function, [self.stack])
+
+    def pop_val(self):
+        return self.builder.load(self.pop())
 
     def define_push(self):
         push_func_type = ir.FunctionType(ir.VoidType(), [self.type.as_pointer(), lang.VOID_PTR])

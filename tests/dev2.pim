@@ -4,5 +4,5 @@ func u8 add(u8 a, u8 b) {
 
 func byte main() {
     // ini u8 x = 2;
-    return [3];
+    return [5 [2] +];
 };

@@ -83,6 +83,23 @@ class LiteralValue():
                         self.stack.push_top_ptr()
                     elif element.verify("operator", lang.DOT_DOT_PERCENTAGE):
                         self.stack.push_base_ptr()
+                    elif element.verify("operator", lang.BANG):
+                        self.stack.push_size()
+                    elif element.verify("operator", lang.PERCENTAGE):
+                        self.stack.push(self.stack.pop_val())
+                    elif element.verify("operator", "dup"):
+                        to_dup = self.stack.pop_val()
+                        self.stack.push(to_dup)
+                        self.stack.push(to_dup)
+                    elif element.verify("operator", lang.STAR):
+                        ptr = self.stack.pop()
+                        ptr_ptr = self.builder.alloca(ptr.type)
+                        self.builder.store(ptr, ptr_ptr)
+                        self.stack.push(ptr_ptr)
+                    elif element.verify("operator", lang.PLUS):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        self.stack.push(self.builder.add(value_a, value_b))
                     else:
                         self.compiler.raise_exception(self.InvalidOperator)
                 else:
