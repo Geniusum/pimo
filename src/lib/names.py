@@ -81,6 +81,7 @@ class Function(Name):
     def gen_args(self):
         if len(self.func.args):
             builder = ir.IRBuilder(self.func.append_basic_block("entry"))
+            builder.comment("d")
             for arg in self.func.args:
                 arg_ptr = builder.alloca(arg.type)
                 builder.store(arg, arg_ptr)
