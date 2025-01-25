@@ -204,7 +204,6 @@ class Compiler():
             if not tokens: continue
 
             for token in tokens:
-                if isinstance(token, lang.Block): continue
                 try: program.set_line(token.line)
                 except: continue
                 else: break
@@ -213,7 +212,9 @@ class Compiler():
             s_arguments = tokens[1:]
             instruction = tokens[0]
 
-            if instruction.verify("instruction", "func"):
+            instoken = lang.is_a_token(instruction)
+
+            if instoken and instruction.verify("instruction", "func"):
                 type_token = lang.pres_token(s_arguments, 0)
                 name_token = lang.pres_token(s_arguments, 1)
                 args_block = None
@@ -269,7 +270,7 @@ class Compiler():
                     try: entry = func.entry_basic_block
                     except: entry = func.append_basic_block("entry")
                     self.check_instructions(segment_block.elements, func_class, entry)
-            elif instruction.verify("instruction", "return"):
+            elif instoken and instruction.verify("instruction", "return"):
                 if not inner_is_block:
                     self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
                 if len(s_arguments) == 1:
@@ -281,14 +282,37 @@ class Compiler():
                     except AssertionError:
                         self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
                 elif not len(s_arguments):
-                    if str(function.function_type.return_type) != "void":
-                        self.raise_exception(self.InvalidInstructionContext, "The function don't returns a void value.")
-                    try: builder.ret_void()
+                    try: builder.ret(ir.Constant(function.function_type.return_type, None))
                     except AssertionError:
                         self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
                 else:
                     self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
-            elif instruction.verify_type("type"):
+            elif instoken and instruction.verify("instruction", "if"):
+                if not inner_is_block:
+                    self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
+                ended = False
+                if not len(tokens) >= 3:
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                state = 0
+                ifblocks = {}
+                for token in tokens:
+                    if state == 0:
+                        if not lang.is_a_token(token):
+                            self.raise_exception(self.InvalidInstructionSyntax)
+                        if not (token.verify("instruction", "if") or token.verify("instruction", "elif") or token.verify("instruction", "else")):
+                            self.raise_exception(self.InvalidInstructionSyntax)
+                        inst = token.token_string.lower()
+                        if inst == "elif":
+                            inst = self.generate_id()
+                        ifblocks[inst] = {
+                            "condition": None,
+                            "block": None
+                        }
+                        state = 1
+                    ...  # TODO
+            elif instoken and (instruction.verify("instruction", "elif") or instruction.verify("instruction", "else")):
+                self.raise_exception(self.InvalidInstructionSyntax, "If instruction needed.")
+            elif instoken and instruction.verify_type("type"):
                 self.check_inner_function(inner_is_block)
                 d_arguments = lang.split_tokens(tokens, "operator", lang.EQUAL)
                 vartype_token = lang.pres_token(d_arguments[0], 0)
@@ -315,11 +339,35 @@ class Compiler():
                 varvalue = None
                 if not varvalue_token is None:
                     varvalue = values.LiteralValue(self, varvalue_token, builder, scope).value
-                varvalue_ptr = builder.alloca(vartype)
-                builder.store(varvalue, varvalue_ptr)
+                    varvalue_ptr = builder.alloca(vartype)
+                    builder.store(varvalue, varvalue_ptr)
                 var:names.Variable = scope.append(varname, names.Variable, vartype)
                 var.assign_value(builder, varvalue_ptr)
+            elif instoken and instruction.verify_type("name") and len(lang.split_tokens(s_arguments, "operator", lang.EQUAL)) > 1:
+                self.check_inner_function(inner_is_block)
+                d_arguments = lang.split_tokens(tokens, "operator", lang.EQUAL)
+                if not len(d_arguments) == 2:
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                if not len(d_arguments[0]) == 1:
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                if not len(d_arguments[1]) == 1:
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                varname_token = lang.pres_token(d_arguments[0], 0)
+                varvalue_token = lang.pres_token(d_arguments[1], 0)
+                if not self.verify_literal_value_type(varvalue_token):
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                varname = varname_token.token_string
+                found = scope.get_from_path(varname)
+                if not isinstance(found, names.Variable):
+                    self.raise_exception(self.InvalidInstructionSyntax, "Need to be a variable.")
+                found:names.Variable
+                varvalue = values.LiteralValue(self, varvalue_token, builder, scope).value
+                vartype = found.type
+                varvalue_ptr = builder.alloca(vartype)
+                builder.store(varvalue, varvalue_ptr)
+                found.assign_value(builder, varvalue_ptr)
             elif self.verify_literal_value_type(instruction):
+                self.check_inner_function(inner_is_block)
                 if len(s_arguments):
                     self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
                 value = values.LiteralValue(self, instruction.token_string, builder, scope)

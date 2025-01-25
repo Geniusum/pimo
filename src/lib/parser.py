@@ -218,14 +218,17 @@ class Parser():
                     except: pass
                     active_block.elements.append(stack_block)
                     active_block = stack_block
+                    active_block.line = line_nb
                 elif token.verify("delimiter", lang.OPEN_CURLY_BRACE):
                     segment_block = lang.Block("segment", active_block, token)
                     active_block.elements.append(segment_block)
                     active_block = segment_block
+                    active_block.line = line_nb
                 elif token.verify("delimiter", lang.OPEN_BRACKET):
                     segment_block = lang.Block("options", active_block, token)
                     active_block.elements.append(segment_block)
                     active_block = segment_block
+                    active_block.line = line_nb
                 elif token.verify("delimiter", lang.CLOSE_HOOK):
                     if active_block == root:
                         self.raise_exception(line_nb, self.BlockDelimitation, "Can't close a non-existant block.")

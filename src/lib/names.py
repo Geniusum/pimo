@@ -24,7 +24,7 @@ class Name():
         return active
 
     def exists(self, name:str) -> bool:
-        return name in self.names.keys()
+        return name in list(self.names.keys())
     
     def append(self, name:str, nameclass, *args, **kwargs):
         if self.exists(name):
@@ -80,10 +80,10 @@ class Function(Name):
 
     def gen_args(self):
         if len(self.func.args):
-            builder = ir.IRBuilder(self.func.append_basic_block("entry"))
-            builder.comment("d")
+            try: builder = ir.IRBuilder(self.func.entry_basic_block)
+            except: builder = ir.IRBuilder(self.func.append_basic_block("entry"))
             for arg in self.func.args:
                 arg_ptr = builder.alloca(arg.type)
                 builder.store(arg, arg_ptr)
                 argvar = self.append(arg.name.replace(".", "_"), Variable, arg.type)
-                argvar.assign_value(builder, arg_ptr)d
+                argvar.assign_value(builder, arg_ptr)

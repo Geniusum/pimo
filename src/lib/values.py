@@ -75,6 +75,10 @@ class LiteralValue():
                             if not self.compiler.verify_literal_value_type(element):
                                 self.compiler.raise_exception(self.InvalidElementType)
                             arguments.append(LiteralValue(self.compiler, element, self.builder, self.scope).value)
+                        if len(arguments) > len(found.func.args):
+                            self.compiler.raise_exception(self.InvalidArgumentSyntax, "Too many arguments.")
+                        if len(arguments) < len(found.func.args):
+                            self.compiler.raise_exception(self.InvalidArgumentSyntax, "Not enough arguments.")
                         self.value = self.builder.call(found.func, arguments)
                         self.type = found.func.function_type.return_type
                     else:
