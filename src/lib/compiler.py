@@ -1,6 +1,4 @@
-import llvmlite as llvm
 import llvmlite.ir as ir
-import llvmlite.binding as llvm_bindings
 import lib.logger as logger
 import lib.lang as lang
 import lib.utils as utils
@@ -9,6 +7,7 @@ import lib.memory as memory
 import lib.stack as stack
 import lib.info as info
 import lib.values as values
+import lib.names as names
 import random, os, platform
 
 class Compiler():
@@ -30,6 +29,7 @@ class Compiler():
         self.memories:list[memory.Memory] = []
         self.stacks:list[stack.Stack] = []
         self.macros = {}
+        self.scope = names.GlobalScope(self, self.main_program.module)
     
     def generate_id(self) -> str:
         size = 8
@@ -140,7 +140,7 @@ class Compiler():
                         if mtoken.verify("macro", macro_name.token_string):
                             self.raise_exception(self.InvalidPreprocessorCommand, "Cannot call a macro within itself.")
 
-                    self.scopes[program["id"]]["macros"][macro_name.token_string] = macro_tokens
+                    self.scopes[program["id"]]["macros"][macro_name.token_string] = macro_tokens  # TODO: Use new scopes
                 else:
                     self.raise_exception(self.InvalidPreprocessorCommand, "Wanted a valid preprocessor command name.")
     
@@ -180,7 +180,7 @@ class Compiler():
 
         return blocks
     
-    def check_instructions(self, blocks:list, inner:any=None):
+    def check_instructions(self, blocks:list, scope:names.Name, inner:any=None):
         program = self.running_programs[-1]
         module:ir.Module = program.module
 
@@ -251,10 +251,12 @@ class Compiler():
                     arguments[arg_name_token] = lang.get_type_from_token(arg_type_token)
                 has_segment = lang.is_a_segment(segment_block)
                 func_type = ir.FunctionType(func_ret_type, arguments.values())
-                func = ir.Function(module, func_type, func_name)
+                func_class = self.scope.append(func_name, names.Function, func_type)
+                func:ir.Function = func_class.func
                 if has_segment:
-                    entry = func.append_basic_block("entry")
-                    self.check_instructions(segment_block.elements, entry)
+                    try: entry = func.entry_basic_block
+                    except: entry = func.append_basic_block("entry")
+                    self.check_instructions(segment_block.elements, func_class, entry)
             elif instruction.verify("instruction", "return"):
                 if not inner_is_block:
                     self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
@@ -262,7 +264,7 @@ class Compiler():
                     value_token = s_arguments[0]
                     if not self.verify_literal_value_type(value_token):
                         self.raise_exception(self.InvalidInstructionSyntax, "Not a valid literal value type.")
-                    value = values.LiteralValue(self, value_token, builder)
+                    value = values.LiteralValue(self, value_token, builder, scope)
                     try: builder.ret(value.value)
                     except AssertionError:
                         self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
@@ -310,7 +312,7 @@ class Compiler():
 
         blocks = self.check_macros(blocks, False)
 
-        self.check_instructions(blocks)
+        self.check_instructions(blocks, self.scope)
 
         ...  # TODO
     

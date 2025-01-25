@@ -1,6 +1,8 @@
-func u8 add(u8 a, u8 b);
+func u8 add(u8 a, u8 b) {
+    return _1;
+};
 
 func byte main() {
     // ini u8 x = 2;
-    return [45 .%];
+    return [3];
 };

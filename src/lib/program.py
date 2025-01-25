@@ -4,6 +4,7 @@ import lib.fasm as fasm
 import lib.memory as memory
 import lib.stack as stack
 import lib.sourcecode as sourcecode
+import lib.names as names
 import os
 
 class Program():

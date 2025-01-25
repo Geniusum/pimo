@@ -1,6 +1,7 @@
 import lib.logger as logger
 import lib.utils as utils
 import lib.lang as lang
+import copy
 
 class Parser():
     class InvalidStringReference(BaseException): ...
@@ -253,3 +254,57 @@ class Parser():
                     active_block.elements.append(token)
         
         return root.elements
+    
+    def parse_rest(self, blocks:lang.Block):
+        old_blocks = None
+        while old_blocks != blocks:
+            old_blocks = copy.copy(blocks)
+            for element_index, element in enumerate(blocks):
+                if lang.is_a_token(element):
+                    last_element = utils.get_item_safe(blocks, element_index - 1)
+                    if not lang.is_a_token(last_element): last_element = lang.Token("")
+
+                    next_element = utils.get_item_safe(blocks, element_index + 1)
+                    if not lang.is_a_token(next_element): next_element = lang.Token("")
+
+                    next_element_2 = utils.get_item_safe(blocks, element_index + 2)
+                    if not lang.is_a_token(next_element_2): next_element_2 = lang.Token("")
+
+                    """if element.verify_type("name") and next_element.verify("operator", lang.DOT) and next_element_2.verify_type("name"):
+                        element.token_string += f".{next_element_2.token_string}"
+                        blocks.remove(next_element)
+                        blocks.remove(next_element_2)"""
+                    if last_element.verify_type("name") and element.verify("operator", lang.DOT) and next_element.verify_type("name"):
+                        last_element.token_string += f".{next_element.token_string}"
+                        blocks.remove(element)
+                        blocks.remove(next_element)
+                    elif last_element.verify_type("name") and element.verify("operator", lang.DOT) and next_element.verify("operator", lang.CARET):
+                        last_element.token_string += f".^"
+                        blocks.remove(element)
+                        blocks.remove(next_element)
+                    elif last_element.verify("operator", lang.CARET) and element.verify("operator", lang.DOT) and next_element.verify_type("name"):
+                        next_element.token_string += f".^"
+                        blocks.remove(element)
+                        blocks.remove(next_element)
+                else:
+                    element.elements = self.parse_rest(element.elements)
+        
+        for element_index, element in enumerate(blocks):
+            if lang.is_a_token(element):
+                last_element = utils.get_item_safe(blocks, element_index - 1)
+                if not lang.is_a_token(last_element): last_element = lang.Token("")
+
+                next_element = utils.get_item_safe(blocks, element_index + 1)
+                if not lang.is_a_token(next_element): next_element = lang.Token("")
+
+                next_element_2 = utils.get_item_safe(blocks, element_index + 2)
+                if not lang.is_a_token(next_element_2): next_element_2 = lang.Token("")
+
+                if element.verify_type("name") and next_element.verify("operator", lang.COLON) and next_element_2.verify_type("type"):
+                    element.type = lang.get_type_from_token(next_element_2)
+                    blocks.remove(next_element)
+                    blocks.remove(next_element_2)
+            else:
+                element.elements = self.parse_rest(element.elements)
+        
+        return blocks

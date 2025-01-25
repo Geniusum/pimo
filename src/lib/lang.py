@@ -31,6 +31,7 @@ PERCENTAGE = "%"
 COLON = ":"
 EQUAL = "="
 PLUS = "+"
+CARET = "^"
 
 # Two chars
 DOUBLE_HASHTAG = "##"
@@ -45,7 +46,7 @@ DOT_DOT_PERCENTAGE = "..%"
 
 # Operators
 OPERATORS = [
-             HASHTAG, DOUBLE_HASHTAG, TILDE, COLON, PERCENTAGE, EQUAL,
+             HASHTAG, DOUBLE_HASHTAG, TILDE, COLON, PERCENTAGE, EQUAL, CARET, DOT,
              PLUS, DOT_PERCENTAGE, DOT_DOT_PERCENTAGE  # Stack operators
             ]
 
@@ -121,7 +122,7 @@ DefaultTokens = {
 }
 L_DefaultTokens = list(DefaultTokens)
 
-LITERAL_TOKEN_TYPES = ["integer", "decimal", "boolean", "string"]
+LITERAL_TOKEN_TYPES = ["integer", "decimal", "boolean", "string", "name"]
 
 
 #####################

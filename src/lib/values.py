@@ -1,18 +1,19 @@
-import llvmlite as llvm
 import llvmlite.ir as ir
 import lib.lang as lang
 import lib.stack as stack
+import lib.names as names
 
 class LiteralValue():
     class InvalidElementType(BaseException): ...
     class InvalidLiteralValueType(BaseException): ...
     class InvalidOperator(BaseException): ...
 
-    def __init__(self, compiler, token:lang.Token, builder:ir.IRBuilder):
+    def __init__(self, compiler, token:lang.Token, builder:ir.IRBuilder, scope:names.Name):
         self.compiler = compiler
         self.token = token
         if lang.is_a_token(self.token): self.token_string = token.token_string
         self.builder = builder
+        self.scope = scope
         self.size:int
         self.type:ir.Type
         self.value_ptr:ir.Value
@@ -56,7 +57,14 @@ class LiteralValue():
                     ptr = self.builder.gep(self.value_ptr, [ir.Constant(ir.IntType(32), 0), ir.Constant(ir.IntType(32), i)])
                     self.builder.store(char_value, ptr)
                 return
-            # TODO: Names
+            elif self.token.verify_type("name"):
+                path = self.token_string
+                found:names.Variable = self.scope.get_from_path(path)
+                if not isinstance(found, names.Variable):
+                    self.compiler.raise_exception(self.InvalidElementType, "Need to be a variable.")
+                try: self.type = self.token.type
+                except: self.type = found.type
+                self.value = found.get_value(self.builder, self.type)
             else:
                 self.compiler.raise_exception(self.InvalidLiteralValueType)
             self.value_ptr = self.builder.alloca(self.type)
@@ -68,12 +76,12 @@ class LiteralValue():
             self.stack = stack.Stack(self.builder, self.size, self.compiler.generate_id())
             for element in self.token.elements:
                 if self.compiler.verify_literal_value_type(element):
-                    value = LiteralValue(self.compiler, element, self.builder)
+                    value = LiteralValue(self.compiler, element, self.builder, self.scope)
                     self.stack.push(value.value)
                 elif lang.is_a_token(element) and element.verify_type("operator"):
-                    if element.verify(lang.DOT_PERCENTAGE, "operator"):
+                    if element.verify("operator", lang.DOT_PERCENTAGE):
                         self.stack.push_top_ptr()
-                    elif element.verify(lang.DOT_DOT_PERCENTAGE, "operator"):
+                    elif element.verify("operator", lang.DOT_DOT_PERCENTAGE):
                         self.stack.push_base_ptr()
                     else:
                         self.compiler.raise_exception(self.InvalidOperator)

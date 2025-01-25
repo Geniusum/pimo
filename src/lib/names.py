@@ -1,0 +1,85 @@
+import llvmlite.ir as ir
+import lib.lang as lang
+
+class Name():
+    class NameNotFound(BaseException): ...
+    class NameAlreadyTaken(BaseException): ...
+    
+    compiler:any
+    parent:any
+    module:ir.Module
+    names:dict = {}
+
+    def get_from_path(self, path:str):
+        path_parts = path.split(".")
+        active:Name = self
+        for part in path_parts:
+            if not part in active.names.keys():
+                if part == lang.CARET:
+                    active = active.parent
+                else:
+                    self.compiler.raise_exception(self.NameNotFound)
+            else:
+                active = active.names[part]
+        return active
+
+    def exists(self, name:str) -> bool:
+        return name in self.names.keys()
+    
+    def append(self, name:str, nameclass, *args):
+        if self.exists(name):
+            self.compiler.raise_exception(self.NameAlreadyTaken)
+        self.names[name] = nameclass(self, self.compiler, self.module, name, *args)
+        return self.names[name]
+
+class GlobalScope(Name):
+    def __init__(self, compiler, module, parent=None):
+        self.compiler = compiler
+        self.module = module
+        self.parent = parent
+        if self.parent is None: self.parent = self
+
+class Variable(Name):
+    def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.Type, init_value:ir.Value=None, constant:bool=False):
+        self.parent = parent
+        self.compiler = compiler
+        self.id = self.compiler.generate_id()
+        self.module = module
+        self.name = name
+        self.type = type
+        self.var = ir.GlobalVariable(self.module, self.type.as_pointer(), f"var_{self.id}")
+        if init_value:
+            self.var.initializer = init_value
+        else:
+            self.var.initializer = lang.NULL_PTR
+        self.var.global_constant = constant
+    
+    def get_value(self, builder:ir.IRBuilder, type:ir.Type=None):
+        if type is None: type = self.type
+        if builder.load(self.var).type != self.type.as_pointer():
+            return builder.load(builder.bitcast(builder.load(self.var), self.type.as_pointer()))
+        else:
+            return builder.load(builder.load(self.var))
+    
+    def assign_value(self, builder:ir.IRBuilder, value:ir.Value):
+        builder.store(value, self.var)
+
+class Function(Name):
+    def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.FunctionType):
+        self.parent = parent
+        self.compiler = compiler
+        self.id = self.compiler.generate_id()
+        self.module = module
+        self.name = name
+        self.type = type
+        nmid = f"func_{self.id}"
+        if self.parent.parent == self.parent and self.name == "main":
+            nmid = "main"
+        self.func = ir.Function(self.module, self.type, nmid)
+        if len(self.func.args):
+            builder = ir.IRBuilder(self.func.append_basic_block("entry"))
+            for arg in self.func.args:
+                arg_ptr = builder.alloca(arg.type)
+                builder.store(arg, arg_ptr)
+                argvar = self.append(arg.name.replace(".", "_"), Variable, arg.type)
+                argvar.assign_value(builder, arg_ptr)

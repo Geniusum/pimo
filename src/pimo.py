@@ -86,12 +86,12 @@ class Main():
         self.logger.log(to_log, "out")
     
     def show_parsed(self, segments:list):
-        to_show = f"Parsed segments:\n\n{utils.dump(segments)}"
+        to_show = f"Parsed segments:\n{utils.dump(segments)}"
 
         self.logger.log(f"\n{self.logger.start}    ↳ ".join(to_show.splitlines()), "out")
     
     def show_parsed_blocks(self, blocks:list):
-        to_show = f"Parsed blocks:\n\n{utils.dump(blocks)}"
+        to_show = f"Parsed blocks:\n{utils.dump(blocks)}"
 
         self.logger.log(f"\n{self.logger.start}    ↳ ".join(to_show.splitlines()), "out")
 
@@ -156,6 +156,7 @@ class Main():
         self.logger.log("Starting parsing...", "work")
         self.segments = self.parser.parse(self.sourcecode.content)
         self.blocks = self.parser.parse_blocks(self.segments)
+        self.blocks = self.parser.parse_rest(self.blocks)
         self.logger.log("Parsed.", "success")
 
         if self.parsed:

@@ -1,6 +1,7 @@
-import llvmlite as llvm
 import llvmlite.ir as ir
 import lib.lang as lang
+
+# TODO: Use shared push & pop functions
 
 class Stack():
     def __init__(self, builder:ir.IRBuilder, size:int, id:str):
@@ -50,12 +51,12 @@ class Stack():
         cast_value = self.builder.bitcast(value, lang.VOID_PTR)
         return self.builder.call(self.push_function, [self.stack, cast_value])
 
-    def push_top_ptr(self):
-        self.push(self.builder.load(self.top_ptr))
-    
-    def push_base_ptr(self):
-        self.push(self.builder.load(self.base_ptr))
-        
+    def push_top_ptr(self):  # TODO: Fix
+        self.push(self.top_ptr)
+
+    def push_base_ptr(self):  # TODO: Fix
+        self.push(self.base_ptr)
+
     def pop(self):
         return self.builder.call(self.pop_function, [self.stack])
 
