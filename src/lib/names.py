@@ -86,4 +86,4 @@ class Function(Name):
                 arg_ptr = builder.alloca(arg.type)
                 builder.store(arg, arg_ptr)
                 argvar = self.append(arg.name.replace(".", "_"), Variable, arg.type)
-                argvar.assign_value(builder, arg_ptr)
+                argvar.assign_value(builder, arg_ptr)d
