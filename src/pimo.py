@@ -38,6 +38,7 @@ class Main():
         self.arg_parser.add_argument("-ue", "--uncolored-errors", action="store_true")  # For uncolored error
         self.arg_parser.add_argument("-c", "--chmod", "--change-mod", action="store_true")  # For change mod of the output
         self.arg_parser.add_argument("-e", "--execute", action="store_true")  # For execute the output after compiling
+        self.arg_parser.add_argument("-opt", "--optimize", action="store_true")  # For optimize the LLVM file.
         self.arg_parser.add_argument("sourcecode", type=str)
         self.args = vars(self.arg_parser.parse_args(argv))
 
@@ -55,6 +56,7 @@ class Main():
         self.uncolored_errors:bool = self.args["uncolored_errors"]
         self.change_mod:bool = self.args["chmod"]
         self.execute:bool = self.args["execute"]
+        self.optimize:bool = self.args["optimize"]
 
         self.sourcecode_path:str = self.args["sourcecode"]
         
@@ -175,6 +177,12 @@ class Main():
         llvm_file.write(str(llvm_module))
         llvm_file.close()
         self.logger.log(f"The file `{self.llvm_output}` now contains the LLVM module.", "success")
+
+        if self.optimize:
+            self.logger.log("Optimizing LLVM file...", "work")
+            try: self.execute_command(f"opt -O3 -S {self.llvm_output} -o {self.llvm_output}")
+            except: pass
+            self.logger.log(f"Optimized.", "success")
 
         self.logger.log("Generating object file...", "work")
         try: self.execute_command(f"llc -filetype=obj {self.llvm_output} -o {self.obj_output}")

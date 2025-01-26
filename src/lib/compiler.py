@@ -327,6 +327,7 @@ class Compiler():
                 
                 final_block = builder.append_basic_block()
                 interms = []
+                else_block = None
 
                 for inst_name, block_data in ifblocks.items():
                     condition = block_data["condition"]
@@ -353,17 +354,25 @@ class Compiler():
                             if_builder.branch(final_block)
                     elif inst_name == "else":
                         else_builder = ir.IRBuilder(else_block)
-                        else_builder.branch()
+                        self.check_instructions(segment.elements, scope, if_block)
+                        if not else_block.is_terminated:
+                            else_builder = ir.IRBuilder(if_block)
+                            else_builder.branch(final_block)
                     else:
                         elif_block = builder.append_basic_block()
                         interm = interms[-1]
                         if next_name == "else":
-                            interm_builder.cbranch(condition, elif_block, else_block)
+                            self.check_instructions(segment.elements, scope, elif_block)
+                            if not elif_block.is_terminated:
+                                elif_builder = ir.IRBuilder(elif_block)
+                                elif_builder.cbranch(condition, elif_block, else_block)
                         else:
+                            self.check_instructions(segment.elements, scope, elif_block)
                             new_interm = builder.append_basic_block()
-                            interm.append(new_interm)
-                            interm_builder = ir.IRBuilder(interm)
-                            interm_builder.cbranch(condition, elif_block, new_interm)
+                            interms.append(new_interm)
+                            if not elif_block.is_terminated:
+                                elif_builder = ir.IRBuilder(elif_block)
+                                elif_builder.cbranch(condition, elif_block, new_interm)
                 
                 inner = final_block
                 builder.position_at_end(final_block)

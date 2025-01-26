@@ -1,9 +1,10 @@
-func u8 fib(u8 n) {
-    if [n 0 ==] {return 0};
-    if [n 1 == n 2 == or] {return 1};
-    return [fib([n 1 -]) fib([n 2 -]) +];
-};
-
 func byte main() {
-    return fib(4);
-};
+    u8 x = 2;
+    if [x 2 ==] {
+        return 1;
+    } elif [x 3 ==] {
+        return 2;
+    } else {
+        return 3;
+    }
+}
