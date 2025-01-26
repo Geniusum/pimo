@@ -105,7 +105,7 @@ class LiteralValue():
                         self.stack.push_top_ptr()
                     elif element.verify("operator", lang.DOT_DOT_PERCENTAGE):
                         self.stack.push_base_ptr()
-                    elif element.verify("operator", lang.BANG):
+                    elif element.verify("operator", lang.EXCLAM):
                         self.stack.push_size()
                     elif element.verify("operator", lang.PERCENTAGE):
                         self.stack.push(self.stack.pop_val())
@@ -122,6 +122,60 @@ class LiteralValue():
                         value_b = self.stack.pop_val()
                         value_a = self.stack.pop_val()
                         self.stack.push(self.builder.add(value_a, value_b))
+                    elif element.verify("operator", lang.DASH):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        self.stack.push(self.builder.sub(value_a, value_b))
+                    elif element.verify("operator", lang.BANG):
+                        value = self.stack.pop_val()
+                        cond = self.builder.icmp_unsigned("==", value, lang.FALSE)
+                        with self.builder.if_else(cond) as (then, otherwise):
+                            with then: self.stack.push(lang.TRUE)
+                            with otherwise: self.stack.push(lang.FALSE)
+                    elif element.verify("operator", lang.EQUAL_EQUAL):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        self.stack.push(self.builder.icmp_unsigned("==", value_a, value_b))
+                    elif element.verify("operator", lang.BANG_EQUAL):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        self.stack.push(self.builder.icmp_unsigned("!=", value_a, value_b))
+                    elif element.verify("operator", lang.LESS_EQUAL):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        self.stack.push(self.builder.icmp_unsigned("<=", value_a, value_b))
+                    elif element.verify("operator", lang.GREATER_EQUAL):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        self.stack.push(self.builder.icmp_unsigned(">=", value_a, value_b))
+                    elif element.verify("operator", lang.LESS_THAN):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        self.stack.push(self.builder.icmp_unsigned("<", value_a, value_b))
+                    elif element.verify("operator", lang.GREATER_THAN):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        self.stack.push(self.builder.icmp_unsigned(">", value_a, value_b))
+                    elif element.verify("operator", "and"):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        cond_a = self.builder.icmp_unsigned("==", value_a, lang.FALSE)
+                        cond_b = self.builder.icmp_unsigned("==", value_b, lang.FALSE)
+                        not_a = self.builder.not_(cond_a)
+                        not_b = self.builder.not_(cond_b)
+                        cond = self.builder.and_(not_a, not_b)
+                        result = self.builder.select(cond, lang.TRUE, lang.FALSE)
+                        self.stack.push(result)
+                    elif element.verify("operator", "or"):
+                        value_b = self.stack.pop_val()
+                        value_a = self.stack.pop_val()
+                        cond_a = self.builder.icmp_unsigned("==", value_a, lang.FALSE)
+                        cond_b = self.builder.icmp_unsigned("==", value_b, lang.FALSE)
+                        not_a = self.builder.not_(cond_a)
+                        not_b = self.builder.not_(cond_b)
+                        cond = self.builder.or_(not_a, not_b)
+                        result = self.builder.select(cond, lang.TRUE, lang.FALSE)
+                        self.stack.push(result)
                     else:
                         self.compiler.raise_exception(self.InvalidOperator)
                 else:

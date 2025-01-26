@@ -189,6 +189,18 @@ class Parser():
                 elif part + next_part + next_part_2 == lang.DOT_DOT_PERCENTAGE:
                     token = lang.Token(lang.DOT_DOT_PERCENTAGE, "operator")
                     parts_to_skip = 2
+                elif part + next_part == lang.EQUAL_EQUAL:
+                    token = lang.Token(lang.EQUAL_EQUAL, "operator")
+                    parts_to_skip = 1
+                elif part + next_part == lang.BANG_EQUAL:
+                    token = lang.Token(lang.BANG_EQUAL, "operator")
+                    parts_to_skip = 1
+                elif part + next_part == lang.LESS_EQUAL:
+                    token = lang.Token(lang.LESS_EQUAL, "operator")
+                    parts_to_skip = 1
+                elif part + next_part == lang.GREATER_EQUAL:
+                    token = lang.Token(lang.GREATER_EQUAL, "operator")
+                    parts_to_skip = 1
                 else:
                     token = lang.Token(part)
                 

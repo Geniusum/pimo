@@ -285,6 +285,7 @@ class Compiler():
                     try: builder.ret(ir.Constant(function.function_type.return_type, None))
                     except AssertionError:
                         self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
+                    return
                 else:
                     self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
             elif instoken and instruction.verify("instruction", "if"):
@@ -304,12 +305,69 @@ class Compiler():
                         inst = token.token_string.lower()
                         if inst == "elif":
                             inst = self.generate_id()
+                        if inst in list(ifblocks.keys()):
+                            self.raise_exception(self.InvalidInstructionSyntax)
                         ifblocks[inst] = {
                             "condition": None,
                             "block": None
                         }
-                        state = 1
-                    ...  # TODO
+                        state = 2 if inst == "else" else 1
+                    elif state == 1:
+                        if not self.verify_literal_value_type(token):
+                            self.raise_exception(self.InvalidInstructionSyntax)
+                        user_condition = values.LiteralValue(self, token, builder, scope)
+                        condition = builder.icmp_unsigned("!=", user_condition.value, lang.FALSE)
+                        ifblocks[list(ifblocks.keys())[-1]]["condition"] = condition
+                        state = 2
+                    elif state == 2:
+                        if not lang.is_a_segment(token):
+                            self.raise_exception(self.InvalidInstructionSyntax)
+                        ifblocks[list(ifblocks.keys())[-1]]["block"] = token
+                        state = 0
+                
+                final_block = builder.append_basic_block()
+                interms = []
+
+                for inst_name, block_data in ifblocks.items():
+                    condition = block_data["condition"]
+                    segment = block_data["block"]
+
+                    next_name = None
+                    try: next_name = ifblocks[list(ifblocks.keys()).index(inst_name) + 1]
+                    except: pass
+
+                    if inst_name == "if":
+                        if_block:ir.Block = builder.append_basic_block()
+                        if len(ifblocks) == 2:
+                            else_block = builder.append_basic_block()
+                            builder.cbranch(condition, if_block, else_block)
+                        elif len(ifblocks) == 1:
+                            builder.cbranch(condition, if_block, final_block)
+                        else:
+                            interm = builder.append_basic_block()
+                            interms.append(interm)
+                            builder.cbranch(condition, if_block, interm)
+                        self.check_instructions(segment.elements, scope, if_block)
+                        if not if_block.is_terminated:
+                            if_builder = ir.IRBuilder(if_block)
+                            if_builder.branch(final_block)
+                    elif inst_name == "else":
+                        else_builder = ir.IRBuilder(else_block)
+                        else_builder.branch()
+                    else:
+                        elif_block = builder.append_basic_block()
+                        interm = interms[-1]
+                        if next_name == "else":
+                            interm_builder.cbranch(condition, elif_block, else_block)
+                        else:
+                            new_interm = builder.append_basic_block()
+                            interm.append(new_interm)
+                            interm_builder = ir.IRBuilder(interm)
+                            interm_builder.cbranch(condition, elif_block, new_interm)
+                
+                inner = final_block
+                builder.position_at_end(final_block)
+
             elif instoken and (instruction.verify("instruction", "elif") or instruction.verify("instruction", "else")):
                 self.raise_exception(self.InvalidInstructionSyntax, "If instruction needed.")
             elif instoken and instruction.verify_type("type"):

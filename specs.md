@@ -1,3 +1,4 @@
 - [ ] Advanced types
 - [ ] Names
 - [ ] Stack operators
+- [ ] Conditions and switch

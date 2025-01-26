@@ -33,6 +33,7 @@ EQUAL = "="
 PLUS = "+"
 CARET = "^"
 BANG = "!"
+EXCLAM = "?"
 STAR = "*"
 
 # Two chars
@@ -42,15 +43,20 @@ SLASH_STAR = "/*"
 STAR_SLASH = "*/"
 DOUBLE_COLON = "::"
 DOT_PERCENTAGE = ".%"
+EQUAL_EQUAL = "=="
+BANG_EQUAL = "!="
+LESS_EQUAL = "<="
+GREATER_EQUAL = "<="
 
 # Three chars
 DOT_DOT_PERCENTAGE = "..%"
 
 # Operators
 OPERATORS = [
-             HASHTAG, DOUBLE_HASHTAG, TILDE, COLON, PERCENTAGE, EQUAL, CARET, DOT,
-             PLUS, DOT_PERCENTAGE, DOT_DOT_PERCENTAGE, BANG, PERCENTAGE, "dup", STAR  # Stack operators
-            ]
+    HASHTAG, DOUBLE_HASHTAG, TILDE, COLON, PERCENTAGE, EQUAL, CARET, DOT,
+    # Stack operators
+    PLUS, DOT_PERCENTAGE, DOT_DOT_PERCENTAGE, BANG, PERCENTAGE, "dup", STAR, "and", "or", EXCLAM, EQUAL_EQUAL, BANG_EQUAL, LESS_EQUAL, GREATER_EQUAL, LESS_THAN, GREATER_THAN, DASH
+]
 
 # Delimiters
 DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSE_HOOK, OPEN_CURLY_BRACE, CLOSE_CURLY_BRACE, OPEN_BRACKET, CLOSE_BRACKET]
@@ -97,6 +103,11 @@ TYPES_WITH_LLTYPES = {
 }
 
 TYPES = list(TYPES_WITH_LLTYPES.keys())
+
+# Constants
+
+TRUE = ir.Constant(BOOLEAN, 1)
+FALSE = ir.Constant(BOOLEAN, 0)
 
 # Alphabet
 AL_LETTERS = "abcdefghijklmnopqrstuvwxyz"
