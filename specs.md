@@ -1,4 +1,5 @@
 - [ ] Advanced types
-- [ ] Names
-- [ ] Stack operators
+- [X] Names
+- [X] Stack operators
 - [ ] Conditions and switch
+- [X] Procedures (function without args and returned value)

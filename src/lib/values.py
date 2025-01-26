@@ -89,8 +89,10 @@ class LiteralValue():
                     self.value = found.get_value(self.builder, self.type)
             else:
                 self.compiler.raise_exception(self.InvalidLiteralValueType)
-            self.value_ptr = self.builder.alloca(self.type)
-            self.builder.store(self.value, self.value_ptr)
+            try:
+                self.value_ptr = self.builder.alloca(self.type)
+                self.builder.store(self.value, self.value_ptr)
+            except: pass
         elif lang.is_a_stack(self.token):
             self.size = 128  # Default
             try: self.size = self.token.size

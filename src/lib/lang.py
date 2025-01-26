@@ -46,7 +46,7 @@ DOT_PERCENTAGE = ".%"
 EQUAL_EQUAL = "=="
 BANG_EQUAL = "!="
 LESS_EQUAL = "<="
-GREATER_EQUAL = "<="
+GREATER_EQUAL = ">="
 
 # Three chars
 DOT_DOT_PERCENTAGE = "..%"
@@ -65,7 +65,7 @@ DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSE_HOOK, OPEN_CURLY_BRACE, CLOSE_C
 REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
 
 # Instructions
-INSTRUCTIONS = ["func", "return", "if", "elif", "else"]
+INSTRUCTIONS = ["func", "return", "if", "elif", "else", "while", "proc"]
 
 # Types
 UNSIGNED_8 = ir.IntType(8)

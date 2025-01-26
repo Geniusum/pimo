@@ -317,6 +317,9 @@ class Parser():
                     element.type = lang.get_type_from_token(next_element_2)
                     blocks.pop(element_index + 1)
                     blocks.pop(element_index + 2)
+                elif lang.is_a_stack(last_element) and element.verify("operator", lang.COLON) and next_element.verify_type("type"):
+                    element.type = lang.get_type_from_token(next_element)
+                    blocks.pop(element_index + 1)
                 elif element.verify_type("name") and lang.is_options(next_element_b):
                     element.options = next_element_b
                     blocks.pop(element_index + 1)

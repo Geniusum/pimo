@@ -270,28 +270,55 @@ class Compiler():
                     try: entry = func.entry_basic_block
                     except: entry = func.append_basic_block("entry")
                     self.check_instructions(segment_block.elements, func_class, entry)
+            elif instoken and instruction.verify("instruction", "proc"):
+                name_token = lang.pres_token(s_arguments, 0)
+                try: args_block = name_token.options
+                except: pass
+                else:
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                segment_block = lang.pres_block(s_arguments, 1)
+                if not (
+                    name_token.verify_type("name") and
+                    lang.is_a_segment(segment_block)
+                ):
+                    self.raise_exception(self.InvalidInstructionSyntax)
+
+                func_type = ir.FunctionType(lang.VOID, [])
+                func_name = name_token.token_string
+                if not lang.is_a_lower_name(func_name):
+                    self.raise_exception(self.InvalidInstructionSyntax, "Function names must be in lowercase.")
+
+                func_class:names.Function = self.scope.append(func_name, names.Function, func_type)
+                func:ir.Function = func_class.func
+                try: entry = func.entry_basic_block
+                except: entry = func.append_basic_block("entry")
+                self.check_instructions(segment_block.elements, func_class, entry)
+                if not entry.is_terminated:
+                    entry_builder = ir.IRBuilder(entry)
+                    entry_builder.ret_void()
             elif instoken and instruction.verify("instruction", "return"):
                 if not inner_is_block:
                     self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
+                if inner.is_terminated:
+                    self.raise_exception(self.InvalidInstructionContext, "Block already returned.")
                 if len(s_arguments) == 1:
                     value_token = s_arguments[0]
                     if not self.verify_literal_value_type(value_token):
                         self.raise_exception(self.InvalidInstructionSyntax, "Not a valid literal value type.")
                     value = values.LiteralValue(self, value_token, builder, scope)
-                    try: builder.ret(value.value)
-                    except AssertionError:
-                        self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
+                    builder.ret(value.value)
                 elif not len(s_arguments):
-                    try: builder.ret(ir.Constant(function.function_type.return_type, None))
-                    except AssertionError:
-                        self.raise_exception(self.InvalidInstructionContext, "Function already returned.")
+                    rtype = inner.function.function_type.return_type
+                    if rtype == lang.VOID:
+                        builder.ret_void()
+                    else:
+                        builder.ret(ir.Constant(rtype, None))
                     return
                 else:
                     self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
             elif instoken and instruction.verify("instruction", "if"):
                 if not inner_is_block:
                     self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
-                ended = False
                 if not len(tokens) >= 3:
                     self.raise_exception(self.InvalidInstructionSyntax)
                 state = 0
@@ -325,27 +352,27 @@ class Compiler():
                         ifblocks[list(ifblocks.keys())[-1]]["block"] = token
                         state = 0
                 
-                final_block = builder.append_basic_block()
+                final_block = builder.append_basic_block("final")
                 interms = []
                 else_block = None
 
-                for inst_name, block_data in ifblocks.items():
+                for inst_index, (inst_name, block_data) in enumerate(ifblocks.items()):
                     condition = block_data["condition"]
                     segment = block_data["block"]
-
+                    
                     next_name = None
-                    try: next_name = ifblocks[list(ifblocks.keys()).index(inst_name) + 1]
+                    try: next_name = list(ifblocks.keys())[inst_index + 1]
                     except: pass
 
                     if inst_name == "if":
-                        if_block:ir.Block = builder.append_basic_block()
+                        if_block:ir.Block = builder.append_basic_block("if")
                         if len(ifblocks) == 2:
-                            else_block = builder.append_basic_block()
+                            else_block = builder.append_basic_block("else")
                             builder.cbranch(condition, if_block, else_block)
                         elif len(ifblocks) == 1:
                             builder.cbranch(condition, if_block, final_block)
                         else:
-                            interm = builder.append_basic_block()
+                            interm = builder.append_basic_block("interm")
                             interms.append(interm)
                             builder.cbranch(condition, if_block, interm)
                         self.check_instructions(segment.elements, scope, if_block)
@@ -353,30 +380,60 @@ class Compiler():
                             if_builder = ir.IRBuilder(if_block)
                             if_builder.branch(final_block)
                     elif inst_name == "else":
+                        if not else_block:
+                            else_block = builder.append_basic_block("else")
                         else_builder = ir.IRBuilder(else_block)
-                        self.check_instructions(segment.elements, scope, if_block)
+                        self.check_instructions(segment.elements, scope, else_block)
                         if not else_block.is_terminated:
                             else_builder = ir.IRBuilder(if_block)
                             else_builder.branch(final_block)
                     else:
-                        elif_block = builder.append_basic_block()
+                        elif_block = builder.append_basic_block("elif")
                         interm = interms[-1]
                         if next_name == "else":
+                            else_block = builder.append_basic_block("else")
                             self.check_instructions(segment.elements, scope, elif_block)
-                            if not elif_block.is_terminated:
-                                elif_builder = ir.IRBuilder(elif_block)
-                                elif_builder.cbranch(condition, elif_block, else_block)
+                            interm_builder = ir.IRBuilder(interm)
+                            interm_builder.cbranch(condition, elif_block, else_block)
                         else:
                             self.check_instructions(segment.elements, scope, elif_block)
-                            new_interm = builder.append_basic_block()
+                            new_interm = builder.append_basic_block("interm")
                             interms.append(new_interm)
-                            if not elif_block.is_terminated:
-                                elif_builder = ir.IRBuilder(elif_block)
-                                elif_builder.cbranch(condition, elif_block, new_interm)
+                            interm_builder = ir.IRBuilder(interm)
+                            interm_builder.cbranch(condition, elif_block, new_interm)
                 
                 inner = final_block
                 builder.position_at_end(final_block)
+            elif instoken and instruction.verify("instruction", "while"):
+                if not inner_is_block:
+                    self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
+                if not len(s_arguments) == 2:
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                cond_token = s_arguments[0]
+                segment_token = s_arguments[1]
+                if not (
+                    self.verify_literal_value_type(cond_token) and
+                    lang.is_a_segment(segment_token)
+                ):
+                    self.raise_exception(self.InvalidInstructionSyntax)
+                final_block = builder.append_basic_block("final")
+                while_block = builder.append_basic_block("while")
 
+                self.check_instructions(segment_token.elements, scope, while_block)
+
+                while_builder = ir.IRBuilder(while_block)
+
+                cond_value_1 = values.LiteralValue(self, cond_token, builder, scope)
+                cond_1 = builder.icmp_unsigned("!=", cond_value_1.value, lang.FALSE)
+                builder.cbranch(cond_1, while_block, final_block)
+
+                cond_value_2 = values.LiteralValue(self, cond_token, while_builder, scope)
+                cond_2 = while_builder.icmp_unsigned("!=", cond_value_2.value, lang.FALSE)
+                if not while_block.is_terminated:
+                    while_builder.cbranch(cond_2, while_block, final_block)
+
+                inner = final_block
+                builder.position_at_end(final_block)
             elif instoken and (instruction.verify("instruction", "elif") or instruction.verify("instruction", "else")):
                 self.raise_exception(self.InvalidInstructionSyntax, "If instruction needed.")
             elif instoken and instruction.verify_type("type"):
@@ -437,7 +494,7 @@ class Compiler():
                 self.check_inner_function(inner_is_block)
                 if len(s_arguments):
                     self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
-                value = values.LiteralValue(self, instruction.token_string, builder, scope)
+                value = values.LiteralValue(self, instruction, builder, scope)
             else:
                 self.raise_exception(self.InvalidInstruction)
     
