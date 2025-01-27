@@ -2,6 +2,10 @@ import llvmlite.ir as ir
 import lib.lang as lang
 
 class Name():
+    """
+    The base class for names.
+    """
+
     class NameNotFound(BaseException): ...
     class NameAlreadyTaken(BaseException): ...
     
