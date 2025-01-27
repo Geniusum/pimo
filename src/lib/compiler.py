@@ -86,44 +86,6 @@ class Compiler():
                     self.raise_exception(self.InvalidPreprocessorCommand, "At least 2 tokens.")
                 
                 ppcommand = tokens[1]
-                """if ppcommand.verify("pposcommand", "mem"):
-                    if not (lang.format_tokens("%o %pposc %o %i", tokens) or lang.format_tokens("%o %pposc %n %i", tokens)):
-                        self.raise_exception(self.InvalidPreprocessorCommand, "Wanted 4 valid tokens.")
-                    mem_id = tokens[2]
-                    
-                    if mem_id.verify("operator", lang.TILDE):
-                        mem_id = lang.Token(program["id"], "name")
-                    elif mem_id.verify_type("name"):
-                        if not lang.is_an_upper_name(mem_id.token_string):
-                            self.raise_exception(self.InvalidPreprocessorCommand, "The memory name must be in uppercase.")
-                    else:
-                        self.raise_exception(self.InvalidPreprocessorCommand, "Invalid memory identifier.")
-                    
-                    if memory.find_memory_index(self.memories, mem_id.token_string):
-                        self.raise_exception(self.InvalidPreprocessorCommand, "Memory already defined.")
-
-                    mem_size = tokens[3]
-
-                    if int(mem_size.token_string) < 1:
-                        self.raise_exception(self.InvalidPreprocessorCommand, "The memory must have at least 1 byte of size.")
-
-                    self.memories.append(memory.Memory(int(mem_size.token_string), mem_id.token_string))
-                elif ppcommand.verify("ppcommand", "acmem"):
-                    if not (lang.format_tokens("%o %ppc %o", tokens) or lang.format_tokens("%o %ppc %n", tokens)):
-                        self.raise_exception(self.InvalidPreprocessorCommand, "Wanted 3 valid tokens.")
-                    mem_id = tokens[2]
-
-                    if mem_id.verify("operator", lang.TILDE):
-                        mem_id = lang.Token(program["id"], "name")
-                    elif mem_id.verify_type("name"):
-                        if not lang.is_an_upper_name(mem_id.token_string):
-                            self.raise_exception(self.InvalidPreprocessorCommand, "The memory name must be in uppercase.")
-                    else:
-                        self.raise_exception(self.InvalidPreprocessorCommand, "Invalid memory identifier.")
-
-                    program["acmem"] = memory.find_memory_index(self.memories, mem_id.token_string)
-                    if program["acmem"] is None:
-                        self.raise_exception(self.InvalidPreprocessorCommand, "The identified memory doesn't exists.")"""
                 if ppcommand.verify("pposcommand", "define"):
                     if not lang.format_tokens("%o %pposc %n", tokens, True):
                         self.raise_exception(self.InvalidPreprocessorCommand, "At least 3 tokens.")
