@@ -466,7 +466,7 @@ class Compiler():
                     varvalue_ptr = builder.alloca(vartype)
                     builder.store(varvalue, varvalue_ptr)
                 var:names.Variable = scope.append(varname, names.Variable, vartype)
-                var.assign_value(builder, varvalue_ptr)
+                if len(d_arguments) == 2: var.assign_value(builder, varvalue_ptr)
             elif instoken and instruction.verify_type("name") and len(lang.split_tokens(s_arguments, "operator", lang.EQUAL)) > 1:
                 self.check_inner_function(inner_is_block)
                 d_arguments = lang.split_tokens(tokens, "operator", lang.EQUAL)
