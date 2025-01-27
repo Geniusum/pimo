@@ -3,3 +3,4 @@
 - [X] Stack operators
 - [ ] Conditions and switch
 - [X] Procedures (function without args and returned value)
+- [ ] Contexts and jump statements
