@@ -12,7 +12,7 @@ class Name():
     compiler:any
     parent:any
     module:ir.Module
-    names:dict = {}
+    names:dict
 
     def get_from_path(self, path:str):
         path_parts = path.split(".")
@@ -42,6 +42,7 @@ class GlobalScope(Name):
         self.module = module
         self.parent = parent
         if self.parent is None: self.parent = self
+        self.names = {}
 
 class Variable(Name):
     def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.Type, init_value:ir.Value=None, constant:bool=False):
@@ -50,6 +51,7 @@ class Variable(Name):
         self.id = self.compiler.generate_id()
         self.module = module
         self.name = name
+        self.names = {}
         self.type = type
         self.var = ir.GlobalVariable(self.module, self.type.as_pointer(), f"var_{self.id}")
         if init_value:
@@ -75,6 +77,7 @@ class Function(Name):
         self.id = self.compiler.generate_id()
         self.module = module
         self.name = name
+        self.names = {}
         self.type = type
         nmid = f"func_{self.id}"
         if self.parent.parent == self.parent and self.name == "main":

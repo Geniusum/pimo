@@ -1,0 +1,14 @@
+func bool implication(bool p, bool q) {
+    return [p! q or]:bool;  // p => q = not p or q
+};
+
+func bool equivalence(bool p, bool q) {
+    return [^.implication(p, q) ^.implication(q, p) and]:bool;  // p <==> q = p => q and q => p
+};
+
+func bool main() {
+    bool p = false;
+    bool q = false;
+    // return ^.implication(p, q);
+    return ^.equivalence(p, q);
+};

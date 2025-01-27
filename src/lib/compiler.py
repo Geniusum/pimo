@@ -223,7 +223,7 @@ class Compiler():
                     arguments[arg_name_token] = lang.get_type_from_token(arg_type_token)
                 has_segment = lang.is_a_segment(segment_block)
                 func_type = ir.FunctionType(func_ret_type, arguments.values())
-                func_class:names.Function = self.scope.append(func_name, names.Function, func_type, genargs=True)
+                func_class:names.Function = self.scope.append(func_name, names.Function, func_type, genargs=False)
                 func:ir.Function = func_class.func
                 for argument_index, argument in enumerate(func.args):
                     argument.name = list(arguments.keys())[argument_index].token_string

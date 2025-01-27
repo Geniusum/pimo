@@ -286,18 +286,18 @@ class Parser():
                     next_element_2 = utils.get_item_safe(blocks, element_index + 2)
                     if not lang.is_a_token(next_element_2): next_element_2 = lang.Token("")
 
-                    if last_element.verify_type("name") and element.verify("operator", lang.DOT) and next_element.verify_type("name"):
+                    if last_element.verify("operator", lang.CARET) and element.verify("operator", lang.DOT) and next_element.verify_type("name"):
+                        next_element.token_string = f"^.{next_element.token_string}"
+                        blocks.remove(element)
+                        blocks.pop(element_index - 1)
+                    elif last_element.verify_type("name") and element.verify("operator", lang.DOT) and next_element.verify_type("name"):
                         last_element.token_string += f".{next_element.token_string}"
                         blocks.remove(element)
-                        blocks.pop(element_index + 1)
+                        blocks.pop(element_index - 1)
                     elif last_element.verify_type("name") and element.verify("operator", lang.DOT) and next_element.verify("operator", lang.CARET):
                         last_element.token_string += f".^"
                         blocks.remove(element)
-                        blocks.pop(element_index + 1)
-                    elif last_element.verify("operator", lang.CARET) and element.verify("operator", lang.DOT) and next_element.verify_type("name"):
-                        next_element.token_string += f".^"
-                        blocks.remove(element)
-                        blocks.pop(element_index + 1)
+                        blocks.pop(element_index - 1)
                 else:
                     element.elements = self.parse_rest(element.elements)
         
