@@ -18,6 +18,6 @@ class Program():
     
     def set_line(self, new_line:int):
         self.line = new_line
-        
+    
     def terminate(self):
         self.ended = True

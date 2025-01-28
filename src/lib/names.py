@@ -14,7 +14,7 @@ class Name():
     module:ir.Module
     names:dict
 
-    def get_from_path(self, path:str):
+    def get_from_path(self, path:str, error:bool=True):
         path_parts = path.split(".")
         active:Name = self
         for part in path_parts:
@@ -22,7 +22,11 @@ class Name():
                 if part == lang.CARET:
                     active = active.parent
                 else:
-                    self.compiler.raise_exception(self.NameNotFound)
+                    if error:
+                        self.compiler.raise_exception(self.NameNotFound)
+                    else:
+                        active = None
+                        break
             else:
                 active = active.names[part]
         return active
@@ -94,3 +98,6 @@ class Function(Name):
                 builder.store(arg, arg_ptr)
                 argvar = self.append(arg.name.replace(".", "_"), Variable, arg.type)
                 argvar.assign_value(builder, arg_ptr)
+
+class Structure(Name):
+    ...

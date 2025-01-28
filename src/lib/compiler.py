@@ -370,60 +370,66 @@ class Compiler():
                 builder.position_at_end(final_block)
             elif instoken and (instruction.verify("instruction", "elif") or instruction.verify("instruction", "else")):
                 self.raise_exception(self.InvalidInstructionSyntax, "If instruction needed.")
-            elif instoken and instruction.verify_type("type"):
+            elif instoken and (instruction.verify_type("type") or instruction.verify_type("name")):
                 self.check_inner_function(inner_is_block)
-                d_arguments = lang.split_tokens(tokens, "operator", lang.EQUAL)
-                vartype_token = lang.pres_token(d_arguments[0], 0)
-                varname_token = lang.pres_token(d_arguments[0], 1)
-                varvalue_token = None
-                if len(d_arguments) == 2:
-                    if len(d_arguments[1]) > 1:
+                if instruction.verify_type("type") or isinstance(scope.get_from_path(instruction.token_string, error=False), names.Structure):
+                    d_arguments = lang.split_tokens(tokens, "operator", lang.EQUAL)
+                    vartype_token = lang.pres_token(d_arguments[0], 0)
+                    varname_token = lang.pres_token(d_arguments[0], 1)
+                    varvalue_token = None
+                    if len(d_arguments) == 2:
+                        if len(d_arguments[1]) > 1:
+                            self.raise_exception(self.InvalidInstructionSyntax)
+                        varvalue_token = lang.pres_token(d_arguments[1], 0)
+                        if not self.verify_literal_value_type(varvalue_token):
+                            self.raise_exception(self.InvalidInstructionSyntax)
+                    elif len(d_arguments) > 2:
                         self.raise_exception(self.InvalidInstructionSyntax)
+                    if not (
+                        lang.are_tokens([vartype_token, varname_token]) and
+                        varname_token.verify_type("name")
+                    ):
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    varname = varname_token.token_string
+                    if not lang.is_a_lower_name(varname):
+                        self.raise_exception(self.InvalidNameCase, "Variable names must be in lowercase.")
+                    vartype = values.TypeValue(self, vartype_token, builder, scope).type
+                    varvalue = None
+                    if not varvalue_token is None:
+                        varvalue = values.LiteralValue(self, varvalue_token, builder, scope, type_context=vartype).value
+                        varvalue_ptr = builder.alloca(vartype)
+                        builder.store(varvalue, varvalue_ptr)
+                    var:names.Variable = scope.append(varname, names.Variable, vartype)
+                    if len(d_arguments) == 2: var.assign_value(builder, varvalue_ptr)
+                    # TODO : Structure definition at declaration
+                elif instruction.verify_type("name") and isinstance(scope.get_from_path(instruction.token_string, error=False), names.Function):
+                    self.check_inner_function(inner_is_block)
+                    if len(s_arguments):
+                        self.raise_exception(self.InvalidInstructionSyntax, "Too many arguments.")
+                    value = values.LiteralValue(self, instruction, builder, scope)
+                else:
+                    self.check_inner_function(inner_is_block)
+                    d_arguments = lang.split_tokens(tokens, "operator", lang.EQUAL)
+                    if not len(d_arguments) == 2:
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    if not len(d_arguments[0]) == 1:
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    if not len(d_arguments[1]) == 1:
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    varname_token = lang.pres_token(d_arguments[0], 0)
                     varvalue_token = lang.pres_token(d_arguments[1], 0)
                     if not self.verify_literal_value_type(varvalue_token):
                         self.raise_exception(self.InvalidInstructionSyntax)
-                elif len(d_arguments) > 2:
-                    self.raise_exception(self.InvalidInstructionSyntax)
-                if not (
-                    lang.are_tokens([vartype_token, varname_token]) and
-                    vartype_token.verify_type("type") and
-                    varname_token.verify_type("name")
-                ):
-                    self.raise_exception(self.InvalidInstructionSyntax)
-                varname = varname_token.token_string
-                if not lang.is_a_lower_name(varname):
-                    self.raise_exception(self.InvalidNameCase, "Variable names must be in lowercase.")
-                vartype = lang.get_type_from_token(vartype_token)
-                varvalue = None
-                if not varvalue_token is None:
-                    varvalue = values.LiteralValue(self, varvalue_token, builder, scope).value
+                    varname = varname_token.token_string
+                    found = scope.get_from_path(varname)
+                    if not isinstance(found, names.Variable):
+                        self.raise_exception(self.InvalidInstructionSyntax, "Need to be a variable.")
+                    found:names.Variable
+                    vartype = found.type
+                    varvalue = values.LiteralValue(self, varvalue_token, builder, scope, type_context=vartype).value
                     varvalue_ptr = builder.alloca(vartype)
                     builder.store(varvalue, varvalue_ptr)
-                var:names.Variable = scope.append(varname, names.Variable, vartype)
-                if len(d_arguments) == 2: var.assign_value(builder, varvalue_ptr)
-            elif instoken and instruction.verify_type("name") and len(lang.split_tokens(s_arguments, "operator", lang.EQUAL)) > 1:
-                self.check_inner_function(inner_is_block)
-                d_arguments = lang.split_tokens(tokens, "operator", lang.EQUAL)
-                if not len(d_arguments) == 2:
-                    self.raise_exception(self.InvalidInstructionSyntax)
-                if not len(d_arguments[0]) == 1:
-                    self.raise_exception(self.InvalidInstructionSyntax)
-                if not len(d_arguments[1]) == 1:
-                    self.raise_exception(self.InvalidInstructionSyntax)
-                varname_token = lang.pres_token(d_arguments[0], 0)
-                varvalue_token = lang.pres_token(d_arguments[1], 0)
-                if not self.verify_literal_value_type(varvalue_token):
-                    self.raise_exception(self.InvalidInstructionSyntax)
-                varname = varname_token.token_string
-                found = scope.get_from_path(varname)
-                if not isinstance(found, names.Variable):
-                    self.raise_exception(self.InvalidInstructionSyntax, "Need to be a variable.")
-                found:names.Variable
-                varvalue = values.LiteralValue(self, varvalue_token, builder, scope).value
-                vartype = found.type
-                varvalue_ptr = builder.alloca(vartype)
-                builder.store(varvalue, varvalue_ptr)
-                found.assign_value(builder, varvalue_ptr)
+                    found.assign_value(builder, varvalue_ptr)
             elif self.verify_literal_value_type(instruction):
                 self.check_inner_function(inner_is_block)
                 if len(s_arguments):

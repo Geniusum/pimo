@@ -303,6 +303,22 @@ class Parser():
                     element.elements = self.parse_rest(element.elements)
         
         # Types
+        old_blocks = None
+        while old_blocks != blocks:
+            old_blocks = copy.copy(blocks)
+            for element_index, element in enumerate(blocks):
+                element:lang.Token
+                if lang.is_a_token(element):
+                    next_element = utils.get_item_safe(blocks, element_index + 1)
+
+                    if (element.verify_type("type") or element.verify_type("name")) and lang.is_a_token(next_element) and next_element.verify("operator", lang.STAR):
+                        try: element.ptr_iter += 1
+                        except: element.ptr_iter = 1
+                        blocks.pop(element_index + 1)
+                    elif (element.verify_type("type") or element.verify_type("name")) and lang.is_a_stack(next_element):
+                        try: element.array_stacks.append(next_element)
+                        except: element.array_stacks = [next_element]
+                        blocks.pop(element_index + 1)
 
         # Others
         for element_index, element in enumerate(blocks):

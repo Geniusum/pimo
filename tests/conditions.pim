@@ -1,13 +1,4 @@
-func bool implication(bool p, bool q) {
-    return [p! q or]:bool;
-};
-
-func bool equivalence(bool p, bool q) {
-    return [^.implication(p, q) ^.implication(q, p) and]:bool;
-};
-
-func bool main() {
-    bool p = false;
-    bool q = false;
-    return ^.equivalence(p, q);
+func int main() {
+    int[2] p = true;
+    return p;
 };
