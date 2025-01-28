@@ -3,7 +3,6 @@ import lib.logger as logger
 import lib.lang as lang
 import lib.utils as utils
 import lib.program as program
-import lib.memory as memory
 import lib.stack as stack
 import lib.info as info
 import lib.values as values
@@ -28,8 +27,6 @@ class Compiler():
         self.running_programs:list[program.Program] = []
         self.programs:list[program.Program] = [program.Program(pimo_instance.sourcecode_path, pimo_instance.sourcecode, self.generate_id())]
         self.main_program = self.programs[0]
-        self.memories:list[memory.Memory] = []
-        self.stacks:list[stack.Stack] = []
         self.macros = {}
         self.scope = names.GlobalScope(self, self.main_program.module)
     

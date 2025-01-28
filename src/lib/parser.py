@@ -272,6 +272,7 @@ class Parser():
         return root.elements
     
     def parse_rest(self, blocks:lang.Block):
+        # Names
         old_blocks = None
         while old_blocks != blocks:
             old_blocks = copy.copy(blocks)
@@ -301,6 +302,9 @@ class Parser():
                 else:
                     element.elements = self.parse_rest(element.elements)
         
+        # Types
+
+        # Others
         for element_index, element in enumerate(blocks):
             if lang.is_a_token(element):
                 last_element = utils.get_item_safe(blocks, element_index - 1)

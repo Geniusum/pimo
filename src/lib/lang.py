@@ -81,7 +81,7 @@ CHAR = ir.IntType(8)
 BOOLEAN = ir.IntType(1)
 VOID = ir.VoidType()
 VOID_PTR = ir.IntType(8).as_pointer()
-NULL_PTR = ir.Constant(VOID_PTR, None)
+STRING = CHAR.as_pointer()
 
 TYPES_WITH_LLTYPES = {
     "u8": UNSIGNED_8,
@@ -96,6 +96,8 @@ TYPES_WITH_LLTYPES = {
     "chr": CHAR,
     "bool": BOOLEAN,
     "void": VOID,
+    "str": STRING,
+    "any": VOID_PTR,
     # Aliases :
     "int": UNSIGNED_32,
     "dec": FLOAT_64,
@@ -108,6 +110,7 @@ TYPES = list(TYPES_WITH_LLTYPES.keys())
 
 TRUE = ir.Constant(BOOLEAN, 1)
 FALSE = ir.Constant(BOOLEAN, 0)
+NULL_PTR = ir.Constant(VOID_PTR, None)
 
 # Alphabet
 AL_LETTERS = "abcdefghijklmnopqrstuvwxyz"
