@@ -209,12 +209,16 @@ class LiteralValue(Value):
             typed_result = self.builder.bitcast(result, self.type)
             self.value = self.builder.load(typed_result)
         elif lang.is_a_segment(self.token):
-            elements = lang.split_tokens(self.token, "operator", lang.COMMA)
+            elements = lang.split_tokens(self.token.elements, "delimiter", lang.COMMA)
             final_list = []
             for element in elements:
                 if not len(element) == 1:
                     self.compiler.raise_exception(self.InvalidArraySyntax)
-                final_list.append(LiteralValue(self.compiler, element, self.builder, self.scope, self.type_context))
+                element = element[0]
+                self.type_context:ir.ArrayType
+                final_list.append(LiteralValue(self.compiler, element, self.builder, self.scope, type_context=self.type_context.element).value)
+            self.set_type_from_context()
+            self.value = ir.Constant(self.type, final_list)
         else:
             self.compiler.raise_exception(self.InvalidElementType)
 

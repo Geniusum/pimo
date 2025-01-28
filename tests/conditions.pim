@@ -1,4 +1,5 @@
 func int main() {
-    int[2] p = true;
-    return p;
+    int* h;
+    int[2] p = {3, 4};
+    return;
 };

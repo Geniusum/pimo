@@ -471,6 +471,6 @@ class Compiler():
         ...  # TODO
     
     def verify_literal_value_type(self, token:lang.Token):
-        return lang.is_a_stack(token) or (lang.is_a_token(token) and token.token_type.lower() in lang.LITERAL_TOKEN_TYPES)
+        return lang.is_a_stack(token) or lang.is_a_segment(token) or (lang.is_a_token(token) and token.token_type.lower() in lang.LITERAL_TOKEN_TYPES)
 
     def get_llvm_module(self) -> ir.Module: return self.running_programs[-1].module

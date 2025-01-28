@@ -228,7 +228,9 @@ class Main():
 
         if self.execute:
             self.logger.log(f"Executing the output...", "work")
-            try: self.execute_command(f"./{self.output}")
+            stt = "./"
+            if self.output.startswith("/"): stt = "."
+            try: self.execute_command(f"\"{stt}{self.output}\"")
             except Exception as e:
                 self.error_logger.log(f"Exception during the output execution : {e}", "error")
                 self.end()
