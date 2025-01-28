@@ -1,0 +1,15 @@
+struct keyvalue (
+    str key,
+    any value
+)
+
+func void main(){
+    new keyvalue[2] person;
+
+    person[0].key = "name";
+    person[0].value = "John";
+    person[1].key = "age";
+    person[1].value = "John";
+
+    return;
+}

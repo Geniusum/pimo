@@ -1,0 +1,10 @@
+#define NB_PAIRS int[2][]
+
+func void main(){
+    §NB_PAIRS numbers = {
+        {3, 4},
+        {2, 8},
+        {12, 1}
+    }
+    return;
+}
