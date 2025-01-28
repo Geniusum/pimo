@@ -8,6 +8,7 @@ import lib.stack as stack
 import lib.info as info
 import lib.values as values
 import lib.names as names
+import lib.contexts as contexts
 import random, os, platform
 
 class Compiler():
@@ -285,6 +286,7 @@ class Compiler():
                     self.raise_exception(self.InvalidInstructionSyntax)
                 state = 0
                 ifblocks = {}
+                context = contexts.IfContext(builder)
                 for token in tokens:
                     if state == 0:
                         if not lang.is_a_token(token):
@@ -327,42 +329,15 @@ class Compiler():
                     except: pass
 
                     if inst_name == "if":
-                        if_block:ir.Block = builder.append_basic_block("if")
-                        if len(ifblocks) == 2:
-                            else_block = builder.append_basic_block("else")
-                            builder.cbranch(condition, if_block, else_block)
-                        elif len(ifblocks) == 1:
-                            builder.cbranch(condition, if_block, final_block)
-                        else:
-                            interm = builder.append_basic_block("interm")
-                            interms.append(interm)
-                            builder.cbranch(condition, if_block, interm)
-                        self.check_instructions(segment.elements, scope, if_block)
-                        if not if_block.is_terminated:
-                            if_builder = ir.IRBuilder(if_block)
-                            if_builder.branch(final_block)
+                        self.check_instructions(segment.elements, scope, context.if_block)
+                        context.make_if(condition, interm_after=len(ifblocks) > 2)
                     elif inst_name == "else":
-                        if not else_block:
-                            else_block = builder.append_basic_block("else")
-                        else_builder = ir.IRBuilder(else_block)
-                        self.check_instructions(segment.elements, scope, else_block)
-                        if not else_block.is_terminated:
-                            else_builder = ir.IRBuilder(if_block)
-                            else_builder.branch(final_block)
+                        self.check_instruction(segment.elements, scope, context.else_block)
+                        context.make_else(condition)
                     else:
-                        elif_block = builder.append_basic_block("elif")
-                        interm = interms[-1]
-                        if next_name == "else":
-                            else_block = builder.append_basic_block("else")
-                            self.check_instructions(segment.elements, scope, elif_block)
-                            interm_builder = ir.IRBuilder(interm)
-                            interm_builder.cbranch(condition, elif_block, else_block)
-                        else:
-                            self.check_instructions(segment.elements, scope, elif_block)
-                            new_interm = builder.append_basic_block("interm")
-                            interms.append(new_interm)
-                            interm_builder = ir.IRBuilder(interm)
-                            interm_builder.cbranch(condition, elif_block, new_interm)
+                        elif_block = context.get_active_elif_block()
+                        self.check_instruction(segment.elements, scope, elif_block)
+                        context.make_elif(condition, interm_after=next_name != "else")
                 
                 inner = final_block
                 builder.position_at_end(final_block)
