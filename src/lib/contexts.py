@@ -32,8 +32,8 @@ class IfContext(Context):
     def create_elif(self) -> tuple[ir.Block, ir.IRBuilder]:
         elif_block = self.builder.append_basic_block("elif")
         elif_builder = ir.IRBuilder(elif_block)
-        ...  # TODO
-
+        return elif_block, elif_builder
+    
     def get_builder(self, block:ir.Block) -> ir.IRBuilder: return ir.IRBuilder(block)
 
     def position_at_final(self):
@@ -45,18 +45,21 @@ class IfContext(Context):
         else:
             interm, interm_builder = self.create_interm()
             self.builder.cbranch(condition, self.if_block, interm)
-        self.if_builder.branch(self.final_block)
+        if not if_block.is_terminated:
+            self.if_builder.branch(self.final_block)
         if interm_after: return interm, interm_builder
     
     def make_elif(self, condition:ir.Value, interm_after:bool=False):
         interm = self.get_active_interm()
         interm_builder = self.get_builder(interm)
+        elif_block, elif_builder = self.create_elif()
         if not interm_after:
-            interm_builder.cbranch(self.final_block)
-            ...  # TODO
+            interm_builder.cbranch(condition, elif_block, else_block)
         else:
             new_interm, new_interm_builder = self.create_interm()
-            self.builder.cbranch(condition, self.if_block, interm)
+            interm_builder.cbranch(condition, elif_block, new_interm)
+        if not elif_block.is_terminated:
+            elif_builder.branch(self.final_block)
 
     def make_else(self):
         if not self.else_block.is_terminated:
