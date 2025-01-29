@@ -101,7 +101,8 @@ TYPES_WITH_LLTYPES = {
     # Aliases :
     "int": UNSIGNED_32,
     "dec": FLOAT_64,
-    "byte": UNSIGNED_8
+    "byte": UNSIGNED_8,
+    "big": UNSIGNED_256
 }
 
 TYPES = list(TYPES_WITH_LLTYPES.keys())

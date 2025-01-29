@@ -1,5 +1,12 @@
-func int main() {
-    int* h;
-    int[2] p = {3, 4};
+func byte main() {
+    byte i = 100;
+
+    while [i 1 !=] {
+        if [i 4 ==] {
+            return i;
+        };
+        i = [i 1 -];
+    };
+
     return;
 };

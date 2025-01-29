@@ -31,7 +31,7 @@ class LiteralValue(Value):
         self.proc()
     
     def set_type_from_context(self):
-        if self.type_context: self.type = self.type_context
+        if self.type_context: self.type = self.type_context; return True
 
     def proc(self):
         if lang.is_a_token(self.token):
@@ -204,7 +204,8 @@ class LiteralValue(Value):
             try: conv_type = self.token.type.as_pointer()
             except: pass
             self.type = conv_type
-            self.set_type_from_context()
+            if self.set_type_from_context():
+                self.type = self.type.as_pointer()
             result = self.stack.pop()
             typed_result = self.builder.bitcast(result, self.type)
             self.value = self.builder.load(typed_result)

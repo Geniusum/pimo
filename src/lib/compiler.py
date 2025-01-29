@@ -145,7 +145,7 @@ class Compiler():
         if not inner_is_block:
             self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
 
-    def check_instructions(self, blocks:list, scope:names.Name, inner:any=None):
+    def check_instructions(self, blocks:list, scope:names.Name, inner:any=None, context:contexts.Context=None):
         program = self.running_programs[-1]
         module:ir.Module = program.module
 
@@ -173,6 +173,8 @@ class Compiler():
             instruction = tokens[0]
 
             instoken = lang.is_a_token(instruction)
+
+            if inner_is_block: builder.comment(f"Line {program.line}")
 
             if instoken and instruction.verify("instruction", "func"):
                 type_token = lang.pres_token(s_arguments, 0)
@@ -261,14 +263,14 @@ class Compiler():
                     self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
                 if inner.is_terminated:
                     self.raise_exception(self.InvalidInstructionContext, "Block already returned.")
+                rtype = inner.function.function_type.return_type
                 if len(s_arguments) == 1:
                     value_token = s_arguments[0]
                     if not self.verify_literal_value_type(value_token):
                         self.raise_exception(self.InvalidInstructionSyntax, "Not a valid literal value type.")
-                    value = values.LiteralValue(self, value_token, builder, scope)
+                    value = values.LiteralValue(self, value_token, builder, scope, type_context=rtype)
                     builder.ret(value.value)
                 elif not len(s_arguments):
-                    rtype = inner.function.function_type.return_type
                     if rtype == lang.VOID:
                         builder.ret_void()
                     else:
@@ -283,7 +285,6 @@ class Compiler():
                     self.raise_exception(self.InvalidInstructionSyntax)
                 state = 0
                 ifblocks = {}
-                context = contexts.IfContext(builder)
                 for token in tokens:
                     if state == 0:
                         if not lang.is_a_token(token):
@@ -313,9 +314,7 @@ class Compiler():
                         ifblocks[list(ifblocks.keys())[-1]]["block"] = token
                         state = 0
                 
-                final_block = builder.append_basic_block("final")
-                interms = []
-                else_block = None
+                context = contexts.IfContext(builder)
 
                 for inst_index, (inst_name, block_data) in enumerate(ifblocks.items()):
                     condition = block_data["condition"]
@@ -329,15 +328,15 @@ class Compiler():
                         self.check_instructions(segment.elements, scope, context.if_block)
                         context.make_if(condition, interm_after=len(ifblocks) > 2)
                     elif inst_name == "else":
-                        self.check_instruction(segment.elements, scope, context.else_block)
-                        context.make_else(condition)
+                        self.check_instructions(segment.elements, scope, context.else_block)
+                        context.make_else()
                     else:
                         elif_block = context.get_active_elif_block()
-                        self.check_instruction(segment.elements, scope, elif_block)
+                        self.check_instructions(segment.elements, scope, elif_block)
                         context.make_elif(condition, interm_after=next_name != "else")
                 
-                inner = final_block
-                builder.position_at_end(final_block)
+                inner = context.final_block
+                context.position_at_final()
             elif instoken and instruction.verify("instruction", "while"):
                 if not inner_is_block:
                     self.raise_exception(self.InvalidInstructionContext, "Not in a function.")
@@ -350,24 +349,17 @@ class Compiler():
                     lang.is_a_segment(segment_token)
                 ):
                     self.raise_exception(self.InvalidInstructionSyntax)
-                final_block = builder.append_basic_block("final")
-                while_block = builder.append_basic_block("while")
 
-                self.check_instructions(segment_token.elements, scope, while_block)
+                context = contexts.WhileContext(builder)
 
-                while_builder = ir.IRBuilder(while_block)
+                self.check_instructions(segment_token.elements, scope, context.while_block)
 
                 cond_value_1 = values.LiteralValue(self, cond_token, builder, scope)
-                cond_1 = builder.icmp_unsigned("!=", cond_value_1.value, lang.FALSE)
-                builder.cbranch(cond_1, while_block, final_block)
+                cond_value_2 = values.LiteralValue(self, cond_token, context.while_builder, scope)
+                context.make_while(cond_value_1, cond_value_2)
 
-                cond_value_2 = values.LiteralValue(self, cond_token, while_builder, scope)
-                cond_2 = while_builder.icmp_unsigned("!=", cond_value_2.value, lang.FALSE)
-                if not while_block.is_terminated:
-                    while_builder.cbranch(cond_2, while_block, final_block)
-
-                inner = final_block
-                builder.position_at_end(final_block)
+                inner = context.final_block
+                context.position_at_final()
             elif instoken and (instruction.verify("instruction", "elif") or instruction.verify("instruction", "else")):
                 self.raise_exception(self.InvalidInstructionSyntax, "If instruction needed.")
             elif instoken and (instruction.verify_type("type") or instruction.verify_type("name")):

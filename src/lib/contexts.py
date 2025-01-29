@@ -1,4 +1,6 @@
 import llvmlite.ir as ir
+import lib.lang as lang
+import lib.values as values
 
 class Context():
     """
@@ -21,6 +23,7 @@ class IfContext(Context):
         self.else_block:ir.Block = self.builder.append_basic_block("else")
         self.if_builder:ir.IRBuilder = self.get_builder(self.if_block)
         self.else_builder:ir.IRBuilder = self.get_builder(self.else_block)
+        self.else_made = False
 
     def get_active_interm(self) -> ir.Block: return self.interms[-1]
     
@@ -41,6 +44,8 @@ class IfContext(Context):
     def get_builder(self, block:ir.Block) -> ir.IRBuilder: return ir.IRBuilder(block)
 
     def position_at_final(self):
+        if not self.else_made:
+            self.make_else()
         self.builder.position_at_end(self.final_block)
 
     def make_if(self, condition:ir.Value, interm_after:bool=False):
@@ -50,7 +55,7 @@ class IfContext(Context):
             elif_block, elif_builder = self.create_elif()
             interm, interm_builder = self.create_interm()
             self.builder.cbranch(condition, self.if_block, interm)
-        if not if_block.is_terminated:
+        if not self.if_block.is_terminated:
             self.if_builder.branch(self.final_block)
         if interm_after: return interm, interm_builder
     
@@ -60,7 +65,7 @@ class IfContext(Context):
         elif_block = self.get_active_elif_block()
         elif_builder = self.get_builder(elif_block)
         if not interm_after:
-            interm_builder.cbranch(condition, elif_block, else_block)
+            interm_builder.cbranch(condition, elif_block, self.else_block)
         else:
             new_interm, new_interm_builder = self.create_interm()
             interm_builder.cbranch(condition, elif_block, new_interm)
@@ -68,5 +73,27 @@ class IfContext(Context):
             elif_builder.branch(self.final_block)
 
     def make_else(self):
+        self.else_made = True
         if not self.else_block.is_terminated:
             self.else_builder.branch(self.final_block)
+
+class WhileContext(Context):
+    def __init__(self, builder):
+        super().__init__(builder)
+        self.final_block = self.builder.append_basic_block("final")
+        self.while_block = self.builder.append_basic_block("while")
+        self.while_builder = self.get_builder(self.while_block)
+    
+    def make_while(self, cond_value_1:values.LiteralValue, cond_value_2:values.LiteralValue):
+        cond_1 = self.builder.icmp_unsigned("!=", cond_value_1.value, lang.FALSE)
+        self.builder.cbranch(cond_1, self.while_block, self.final_block)
+
+        if not self.while_block.is_terminated:
+            self.while_builder.position_at_end(self.while_block)
+            cond_2 = self.while_builder.icmp_unsigned("!=", cond_value_2.value, lang.FALSE)
+            self.while_builder.cbranch(cond_2, self.while_block, self.final_block)
+
+    def position_at_final(self):
+        self.builder.position_at_end(self.final_block)
+    
+    def get_builder(self, block:ir.Block) -> ir.IRBuilder: return ir.IRBuilder(block)

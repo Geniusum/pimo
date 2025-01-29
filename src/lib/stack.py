@@ -1,9 +1,10 @@
 import llvmlite.ir as ir
 import lib.lang as lang
 
-# TODO: Use shared push & pop functions
-
 class Stack():
+    malloc_func = None
+    free_func = None
+
     def __init__(self, builder:ir.IRBuilder, size:int, id:str):
         self.size = size
         self.id = id
@@ -18,10 +19,15 @@ class Stack():
         self.block = self.builder.block
         self.module = self.block.module
 
+        self.init_memory_functions()
+
         self.push_function = self.define_push()
         self.pop_function = self.define_pop()
+        self.destroy_function = self.define_destroy()
 
-        self.stack = self.builder.alloca(self.type, self.size, f"stack_{id}")
+        size_in_bytes = ir.Constant(lang.UNSIGNED_64, self.size)
+        stack_void_ptr = self.builder.call(Stack.malloc_func, [size_in_bytes])
+        self.stack = self.builder.bitcast(stack_void_ptr, self.type.as_pointer(), f"stack_{self.id}")
 
         self.top_ptr = self.builder.gep(
             self.stack,
@@ -133,3 +139,28 @@ class Stack():
         pop_builder.ret(lang.NULL_PTR)
 
         return pop_func
+
+    def init_memory_functions(self):
+        if Stack.malloc_func is None:
+            malloc_func_type = ir.FunctionType(lang.VOID_PTR, [lang.UNSIGNED_64])
+            Stack.malloc_func = ir.Function(self.module, malloc_func_type, name="malloc")
+
+        if Stack.free_func is None:
+            free_func_type = ir.FunctionType(ir.VoidType(), [lang.VOID_PTR])
+            Stack.free_func = ir.Function(self.module, free_func_type, name="free")
+
+    def define_destroy(self):
+        destroy_func_type = ir.FunctionType(ir.VoidType(), [self.type.as_pointer()])
+        destroy_func = ir.Function(self.module, destroy_func_type, name=f"destroy_{self.id}")
+
+        destroy_block = destroy_func.append_basic_block(name="entry")
+        destroy_builder = ir.IRBuilder(destroy_block)
+
+        stack_ptr = destroy_func.args[0]
+        stack_void_ptr = destroy_builder.bitcast(stack_ptr, lang.VOID_PTR)
+
+        destroy_builder.call(Stack.free_func, [stack_void_ptr])
+
+        destroy_builder.ret_void()
+
+        return destroy_func
