@@ -325,17 +325,18 @@ class Compiler():
                     except: pass
 
                     if inst_name == "if":
-                        self.check_instructions(segment.elements, scope, context.if_block)
-                        context.make_if(condition, interm_after=len(ifblocks) > 2)
+                        inner = self.check_instructions(segment.elements, scope, context.if_block)
+                        context.make_if(condition, interm_after=len(ifblocks) > 2 and ifblocks[list(ifblocks.keys())[1]] != "else")
                     elif inst_name == "else":
-                        self.check_instructions(segment.elements, scope, context.else_block)
+                        inner = self.check_instructions(segment.elements, scope, context.else_block)
                         context.make_else()
                     else:
                         elif_block = context.get_active_elif_block()
-                        self.check_instructions(segment.elements, scope, elif_block)
+                        inner = self.check_instructions(segment.elements, scope, elif_block)
                         context.make_elif(condition, interm_after=next_name != "else")
                 
                 inner = context.final_block
+                builder = ir.IRBuilder(inner)
                 context.position_at_final()
             elif instoken and instruction.verify("instruction", "while"):
                 if not inner_is_block:
@@ -352,13 +353,15 @@ class Compiler():
 
                 context = contexts.WhileContext(builder)
 
-                self.check_instructions(segment_token.elements, scope, context.while_block)
+                inner = self.check_instructions(segment_token.elements, scope, context.while_block)
 
                 cond_value_1 = values.LiteralValue(self, cond_token, builder, scope)
                 cond_value_2 = values.LiteralValue(self, cond_token, context.while_builder, scope)
-                context.make_while(cond_value_1, cond_value_2)
+                builder = ir.IRBuilder(inner)
+                context.make_while(cond_value_1, cond_value_2, builder)
 
                 inner = context.final_block
+                builder = ir.IRBuilder(inner)
                 context.position_at_final()
             elif instoken and (instruction.verify("instruction", "elif") or instruction.verify("instruction", "else")):
                 self.raise_exception(self.InvalidInstructionSyntax, "If instruction needed.")
@@ -429,6 +432,8 @@ class Compiler():
                 value = values.LiteralValue(self, instruction, builder, scope)
             else:
                 self.raise_exception(self.InvalidInstruction)
+        
+        return inner
     
     def compile(self, segments:list[lang.Token], blocks:list[lang.Block], program:program.Program=None):
         if not program: program = self.main_program

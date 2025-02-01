@@ -1,8 +1,10 @@
 func byte main() {
-    byte i = 100;
+    byte i = 255;
 
     while [i 1 !=] {
         if [i 4 ==] {
+            return i;
+        } elif [i 8 ==] {
             return i;
         };
         i = [i 1 -];

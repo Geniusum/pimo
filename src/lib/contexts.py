@@ -72,7 +72,7 @@ class IfContext(Context):
         if not elif_block.is_terminated:
             elif_builder.branch(self.final_block)
 
-    def make_else(self):
+    def make_else(self):#, act_builder:ir.IRBuilder):
         self.else_made = True
         if not self.else_block.is_terminated:
             self.else_builder.branch(self.final_block)
@@ -84,7 +84,7 @@ class WhileContext(Context):
         self.while_block = self.builder.append_basic_block("while")
         self.while_builder = self.get_builder(self.while_block)
     
-    def make_while(self, cond_value_1:values.LiteralValue, cond_value_2:values.LiteralValue):
+    def make_while(self, cond_value_1:values.LiteralValue, cond_value_2:values.LiteralValue, act_builder:ir.IRBuilder):
         cond_1 = self.builder.icmp_unsigned("!=", cond_value_1.value, lang.FALSE)
         self.builder.cbranch(cond_1, self.while_block, self.final_block)
 
@@ -92,6 +92,10 @@ class WhileContext(Context):
             self.while_builder.position_at_end(self.while_block)
             cond_2 = self.while_builder.icmp_unsigned("!=", cond_value_2.value, lang.FALSE)
             self.while_builder.cbranch(cond_2, self.while_block, self.final_block)
+        else:
+            self.while_builder.position_at_end(act_builder.block)
+            cond_2 = act_builder.icmp_unsigned("!=", cond_value_2.value, lang.FALSE)
+            act_builder.cbranch(cond_2, self.while_block, self.final_block)
 
     def position_at_final(self):
         self.builder.position_at_end(self.final_block)
