@@ -1,0 +1,9 @@
+func byte main() {
+    big i = 29186012396;
+
+    while [i 1 !=] {
+        i = [i 1 -];
+    };
+
+    return;
+};

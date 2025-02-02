@@ -1,1 +1,1 @@
-./venv/bin/pip %*
+.\venv\Scripts\pip.exe %*

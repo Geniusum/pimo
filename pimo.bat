@@ -1,0 +1,1 @@
+call devpython.bat src\pimo.py %*

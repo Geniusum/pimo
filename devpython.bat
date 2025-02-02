@@ -1,1 +1,1 @@
-./venv/bin/python %*
+.\venv\Scripts\python.exe %*
