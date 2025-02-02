@@ -1,4 +1,3 @@
-#mem ~ 512
-#acmem ~
-
-exit [3 4 + 1 +];  // Exit with code 8
+func int main() {
+    return 55;  // Returns with the exit code 55
+}

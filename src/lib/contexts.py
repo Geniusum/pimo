@@ -45,10 +45,10 @@ class IfContext(Context):
 
     def position_at_final(self):
         if not self.else_made:
-            self.make_else()
+            self.make_else(None)
         self.builder.position_at_end(self.final_block)
 
-    def make_if(self, condition:ir.Value, interm_after:bool=False):
+    def make_if(self, condition:ir.Value, act_builder:ir.IRBuilder, interm_after:bool=False):
         if not interm_after:
             self.builder.cbranch(condition, self.if_block, self.else_block)
         else:
@@ -57,9 +57,11 @@ class IfContext(Context):
             self.builder.cbranch(condition, self.if_block, interm)
         if not self.if_block.is_terminated:
             self.if_builder.branch(self.final_block)
+        elif not act_builder.block.is_terminated:
+            act_builder.branch(self.final_block)
         if interm_after: return interm, interm_builder
     
-    def make_elif(self, condition:ir.Value, interm_after:bool=False):
+    def make_elif(self, condition:ir.Value, act_builder:ir.IRBuilder, interm_after:bool=False):
         interm = self.get_active_interm()
         interm_builder = self.get_builder(interm)
         elif_block = self.get_active_elif_block()
@@ -71,11 +73,16 @@ class IfContext(Context):
             interm_builder.cbranch(condition, elif_block, new_interm)
         if not elif_block.is_terminated:
             elif_builder.branch(self.final_block)
+        elif not act_builder.block.is_terminated:
+            act_builder.branch(self.final_block)
 
-    def make_else(self):#, act_builder:ir.IRBuilder):
+    def make_else(self, act_builder:ir.IRBuilder):
+        self.else_builder:ir.IRBuilder = self.get_builder(self.else_block)
         self.else_made = True
         if not self.else_block.is_terminated:
             self.else_builder.branch(self.final_block)
+        elif not act_builder.block.is_terminated:
+            act_builder.branch(self.final_block)
 
 class WhileContext(Context):
     def __init__(self, builder):
@@ -92,7 +99,7 @@ class WhileContext(Context):
             self.while_builder.position_at_end(self.while_block)
             cond_2 = self.while_builder.icmp_unsigned("!=", cond_value_2.value, lang.FALSE)
             self.while_builder.cbranch(cond_2, self.while_block, self.final_block)
-        else:
+        elif not act_builder.block.is_terminated:
             self.while_builder.position_at_end(act_builder.block)
             cond_2 = act_builder.icmp_unsigned("!=", cond_value_2.value, lang.FALSE)
             act_builder.cbranch(cond_2, self.while_block, self.final_block)

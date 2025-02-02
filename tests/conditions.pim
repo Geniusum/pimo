@@ -1,14 +1,18 @@
-func byte main() {
+func byte prog() {
     byte i = 255;
 
     while [i 1 !=] {
         if [i 4 ==] {
             return i;
-        } elif [i 8 ==] {
+        } else {
             return i;
         };
         i = [i 1 -];
     };
 
     return;
+};
+
+func byte main() {
+    return ^.prog();
 };

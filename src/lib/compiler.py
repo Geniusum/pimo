@@ -324,16 +324,22 @@ class Compiler():
                     try: next_name = list(ifblocks.keys())[inst_index + 1]
                     except: pass
 
+                    interm_after = next_name != "else"
+                    if not inst_name in ["if", "else"] and next_name is None:
+                        interm_after = False
+
                     if inst_name == "if":
                         inner = self.check_instructions(segment.elements, scope, context.if_block)
-                        context.make_if(condition, interm_after=len(ifblocks) > 2 and ifblocks[list(ifblocks.keys())[1]] != "else")
+                        builder = ir.IRBuilder(inner)
+                        context.make_if(condition, builder, interm_after=interm_after)
                     elif inst_name == "else":
                         inner = self.check_instructions(segment.elements, scope, context.else_block)
-                        context.make_else()
+                        builder = ir.IRBuilder(inner)
+                        context.make_else(builder)
                     else:
                         elif_block = context.get_active_elif_block()
                         inner = self.check_instructions(segment.elements, scope, elif_block)
-                        context.make_elif(condition, interm_after=next_name != "else")
+                        context.make_elif(condition, builder, interm_after=interm_after)
                 
                 inner = context.final_block
                 builder = ir.IRBuilder(inner)
