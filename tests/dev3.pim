@@ -1,8 +1,16 @@
 func byte main() {
-    big i = 29186012396;
+    byte i = 255;
+    byte y;
 
     while [i 1 !=] {
-        i = [i 1 -];
+        if [i 2 ==] {
+            return 2;
+        } else {
+            y = 10;
+            while [y 1 !=] {
+                y = [y 1 -];
+            };
+        };
     };
 
     return;
