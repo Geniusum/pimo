@@ -39,6 +39,7 @@ class Main():
         self.arg_parser.add_argument("-c", "--chmod", "--change-mod", action="store_true")  # For change mod of the output
         self.arg_parser.add_argument("-e", "--execute", action="store_true")  # For execute the output after compiling
         self.arg_parser.add_argument("-opt", "--optimize", action="store_true")  # For optimize the LLVM file.
+        self.arg_parser.add_argument("-w", "--windows", action="store_true")  # For Windows.
         self.arg_parser.add_argument("sourcecode", type=str)
         self.args = vars(self.arg_parser.parse_args(argv))
 
@@ -57,11 +58,15 @@ class Main():
         self.change_mod:bool = self.args["chmod"]
         self.execute:bool = self.args["execute"]
         self.optimize:bool = self.args["optimize"]
+        self.windows:bool = self.args["windows"]
 
         self.sourcecode_path:str = self.args["sourcecode"]
         
         if not self.output:
             self.output = os.path.join(os.path.dirname(self.sourcecode_path), os.path.splitext(os.path.basename(self.sourcecode_path))[0])
+
+        if self.windows:
+            self.output += ".exe"
 
         self.llvm_output = f"{self.output}.ll"
         self.obj_output = f"{self.output}.o"
@@ -229,8 +234,11 @@ class Main():
         if self.execute:
             self.logger.log(f"Executing the output...", "work")
             stt = "./"
-            if self.output.startswith("/"): stt = "."
-            try: self.execute_command(f"\"{stt}{self.output}\"")
+            if self.windows:
+                stt = ".\\"
+            if self.output.startswith("/") or self.output.startswith("\\"): stt = "."
+            try:
+                self.execute_command(f"\"{stt}{self.output}\"")
             except Exception as e:
                 self.error_logger.log(f"Exception during the output execution : {e}", "error")
                 self.end()

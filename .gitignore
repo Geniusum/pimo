@@ -3,4 +3,5 @@
 *.o
 *.ll
 *.s
+*.exe
 venv/

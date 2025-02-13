@@ -5,5 +5,5 @@ func byte add(byte a, byte b) {
 func byte main() {
     byte x = 2;
     byte y = 7;
-    return add(x, y);
+    return ^.add(x, y);
 };

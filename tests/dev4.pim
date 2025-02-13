@@ -1,0 +1,7 @@
+func int add(int a, int b) {
+    return [a b +];
+};
+
+func int main() {
+    return ^.add(3:int, 4:int);
+};
