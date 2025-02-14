@@ -1,0 +1,8 @@
+func byte main() {
+    byte x = 5;
+    byte y = 2;
+
+    ops (sub x y);
+
+    return x;
+}

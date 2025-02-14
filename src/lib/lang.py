@@ -55,7 +55,9 @@ DOT_DOT_PERCENTAGE = "..%"
 OPERATORS = [
     HASHTAG, DOUBLE_HASHTAG, TILDE, COLON, PERCENTAGE, EQUAL, CARET, DOT,
     # Stack operators
-    PLUS, DOT_PERCENTAGE, DOT_DOT_PERCENTAGE, BANG, PERCENTAGE, "dup", STAR, "and", "or", EXCLAM, EQUAL_EQUAL, BANG_EQUAL, LESS_EQUAL, GREATER_EQUAL, LESS_THAN, GREATER_THAN, DASH
+    PLUS, DOT_PERCENTAGE, DOT_DOT_PERCENTAGE, BANG, PERCENTAGE, "dup", STAR, "and", "or", EXCLAM, EQUAL_EQUAL, BANG_EQUAL, LESS_EQUAL, GREATER_EQUAL, LESS_THAN, GREATER_THAN, DASH,
+    # Operations
+    "add", "sub"
 ]
 
 # Delimiters
@@ -65,7 +67,7 @@ DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSE_HOOK, OPEN_CURLY_BRACE, CLOSE_C
 REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
 
 # Instructions
-INSTRUCTIONS = ["func", "return", "if", "elif", "else", "while", "proc", "break", "continue"]
+INSTRUCTIONS = ["func", "return", "if", "elif", "else", "while", "proc", "break", "continue", "ops"]
 
 # Types
 UNSIGNED_8 = ir.IntType(8)

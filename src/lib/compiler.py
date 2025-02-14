@@ -431,6 +431,50 @@ class Compiler():
                     varvalue_ptr = builder.alloca(vartype)
                     builder.store(varvalue, varvalue_ptr)
                     found.assign_value(builder, varvalue_ptr)
+            elif instoken and instruction.verify("instruction", "ops"):
+                self.check_inner_function(inner_is_block)
+                if not len(arguments):
+                    self.raise_exception(self.InvalidInstructionSyntax, "Need operations.")
+                operations = arguments[0]
+                for operation in operations:
+                    if not lang.is_options(operation):
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    operation = operation.elements
+                    if not len(operation) >= 2:
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    operator = operation[0]
+                    if not (lang.is_a_token(operator) and operator.verify_type("operator")):
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    values_tokens = operation[1:]
+                    for value in values_tokens:
+                        if not self.verify_literal_value_type(value):
+                            self.raise_exception(self.InvalidInstructionSyntax)
+                    dest_value_token = values_tokens[0]
+                    if not (lang.is_a_token(dest_value_token) and dest_value_token.verify_type("name")):
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    dest_name:names.Variable = scope.get_from_path(dest_value_token.token_string)
+                    if not isinstance(dest_name, names.Variable):
+                        self.raise_exception(self.InvalidInstructionSyntax)
+                    values_ = []
+                    for value_token in values_tokens:
+                        values_.append(values.LiteralValue(self, value_token, builder, scope, dest_name.type).value)
+                    for value in values_:
+                        final_value:ir.Value
+                        
+                        dest_value = values.LiteralValue(self, dest_value_token, builder, scope).value
+
+                        if operator.verify("operator", "add"):
+                            final_value = builder.add(dest_value, value)
+                        elif operator.verify("operator", "sub"):
+                            final_value = builder.sub(dest_value, value)
+                        else:
+                            self.raise_exception(self.InvalidInstructionSyntax)
+
+                        final_value_ptr = builder.alloca(dest_name.type)
+                        builder.store(final_value, final_value_ptr)
+                            
+                        dest_name.assign_value(builder, final_value_ptr)
+
             elif self.verify_literal_value_type(instruction):
                 self.check_inner_function(inner_is_block)
                 if len(s_arguments):

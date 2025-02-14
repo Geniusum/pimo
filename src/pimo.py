@@ -68,9 +68,9 @@ class Main():
         if self.windows:
             self.output += ".exe"
 
-        self.llvm_output = f"{self.output}.ll"
-        self.obj_output = f"{self.output}.o"
-        self.asm_output = f"{self.output}.s"
+        self.llvm_output = f"{self.output.replace(".exe", "")}.ll"
+        self.obj_output = f"{self.output.replace(".exe", "")}.o"
+        self.asm_output = f"{self.output.replace(".exe", "")}.s"
 
         self.logger = logger.Logger(not self.silent, self.uncolored_logs)
         self.error_logger = logger.ErrorLogger(self.uncolored_errors)
@@ -237,6 +237,7 @@ class Main():
             if self.windows:
                 stt = ".\\"
             if self.output.startswith("/") or self.output.startswith("\\"): stt = "."
+            if self.output.startswith("./") or self.output.startswith(".\\"): stt = ""
             try:
                 self.execute_command(f"\"{stt}{self.output}\"")
             except Exception as e:
