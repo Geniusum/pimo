@@ -65,12 +65,12 @@ class Main():
         if not self.output:
             self.output = os.path.join(os.path.dirname(self.sourcecode_path), os.path.splitext(os.path.basename(self.sourcecode_path))[0])
 
+        self.llvm_output = f"{self.output}.ll"
+        self.obj_output = f"{self.output}.o"
+        self.asm_output = f"{self.output}.s"
+
         if self.windows:
             self.output += ".exe"
-
-        self.llvm_output = f"{self.output.replace(".exe", "")}.ll"
-        self.obj_output = f"{self.output.replace(".exe", "")}.o"
-        self.asm_output = f"{self.output.replace(".exe", "")}.s"
 
         self.logger = logger.Logger(not self.silent, self.uncolored_logs)
         self.error_logger = logger.ErrorLogger(self.uncolored_errors)

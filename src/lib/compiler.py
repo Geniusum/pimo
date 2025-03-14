@@ -201,6 +201,10 @@ class Compiler():
                     lang.is_options(args_block) and
                     len(s_arguments) == 3
                 ):
+                    print(lang.verify_tokens_types({
+                        type_token: "type",
+                        name_token: "name",
+                    }))
                     self.raise_exception(self.InvalidInstructionSyntax, "Syntax : func <type> <name> (<args>, ...) {<function code>; ...};")
                 func_ret_type = lang.get_type_from_token(type_token)
                 func_name = name_token.token_string
