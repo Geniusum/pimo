@@ -149,9 +149,11 @@ class LiteralValue(Value):
                     elif element.verify("operator", lang.BANG):
                         value = self.stack.pop_val()
                         cond = self.builder.icmp_unsigned("==", value, lang.FALSE)
+                        self.builder.comment("cheer 1")
                         with self.builder.if_else(cond) as (then, otherwise):
                             with then: self.stack.push(lang.TRUE)
                             with otherwise: self.stack.push(lang.FALSE)
+                        self.builder.comment("cheer 2")
                     elif element.verify("operator", lang.EQUAL_EQUAL):
                         value_b = self.stack.pop_val()
                         value_a = self.stack.pop_val()

@@ -1,8 +1,10 @@
 func byte main() {
     byte x = 5;
-    byte y = 2;
+    byte y = 1;
 
-    ops (sub x y);
+    while [x 0 == !] {
+        ops (sub x y);
+    };
 
     return x;
 }

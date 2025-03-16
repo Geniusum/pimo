@@ -359,11 +359,13 @@ class Compiler():
 
                 context = contexts.WhileContext(builder)
 
-                inner = self.check_instructions(segment_token.elements, scope, context.while_block)
-
                 cond_value_1 = values.LiteralValue(self, cond_token, builder, scope)
-                cond_value_2 = values.LiteralValue(self, cond_token, context.while_builder, scope)
+
+                inner = self.check_instructions(segment_token.elements, scope, context.while_block)
+                context.while_builder = context.get_builder(context.while_block)
+
                 builder = ir.IRBuilder(inner)
+                cond_value_2 = values.LiteralValue(self, cond_token, context.while_builder, scope)
                 context.make_while(cond_value_1, cond_value_2, builder)
 
                 inner = context.final_block
@@ -459,7 +461,7 @@ class Compiler():
                     if not isinstance(dest_name, names.Variable):
                         self.raise_exception(self.InvalidInstructionSyntax)
                     values_ = []
-                    for value_token in values_tokens:
+                    for value_token in values_tokens[1:]:
                         values_.append(values.LiteralValue(self, value_token, builder, scope, dest_name.type).value)
                     for value in values_:
                         final_value:ir.Value

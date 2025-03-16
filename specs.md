@@ -8,3 +8,4 @@
 - [X] Contexts
 - [ ] Macros
 - [ ] Split instructions into functions
+- [ ] Signed numbers

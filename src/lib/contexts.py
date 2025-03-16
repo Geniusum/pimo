@@ -103,6 +103,9 @@ class WhileContext(Context):
             self.while_builder.position_at_end(act_builder.block)
             cond_2 = act_builder.icmp_unsigned("!=", cond_value_2.value, lang.FALSE)
             act_builder.cbranch(cond_2, self.while_block, self.final_block)
+        else:
+            
+            pass  # print(self.while_block)
 
     def position_at_final(self):
         self.builder.position_at_end(self.final_block)
