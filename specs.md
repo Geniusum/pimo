@@ -1,7 +1,10 @@
-- [ ] Advanced types
+- [X] Advanced types
 - [X] Names
 - [X] Stack operators
-- [ ] Conditions and switch
+- [X] If else elif
+- [ ] Switch case
+- [ ] Jump statements
 - [X] Procedures (function without args and returned value)
-- [ ] Contexts and jump statements
+- [X] Contexts
 - [ ] Macros
+- [ ] Split instructions into functions

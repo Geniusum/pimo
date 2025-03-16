@@ -1,9 +1,9 @@
-func byte add_(byte a, byte b) {
+func byte add(byte a, byte b) {
     return [a b +];
 };
 
 func byte main() {
     byte x = 2;
     byte y = 7;
-    return ^.add_(x, y);
+    return ^.add(x, y);
 };

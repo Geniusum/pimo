@@ -201,10 +201,6 @@ class Compiler():
                     lang.is_options(args_block) and
                     len(s_arguments) == 3
                 ):
-                    print(lang.verify_tokens_types({
-                        type_token: "type",
-                        name_token: "name",
-                    }))
                     self.raise_exception(self.InvalidInstructionSyntax, "Syntax : func <type> <name> (<args>, ...) {<function code>; ...};")
                 func_ret_type = lang.get_type_from_token(type_token)
                 func_name = name_token.token_string
@@ -447,7 +443,10 @@ class Compiler():
                     if not len(operation) >= 2:
                         self.raise_exception(self.InvalidInstructionSyntax)
                     operator = operation[0]
-                    if not (lang.is_a_token(operator) and operator.verify_type("operator")):
+                    if not (lang.is_a_token(operator) and (
+                            operator.verify_type("operator") or
+                            operator.verify_type("name")
+                        )):
                         self.raise_exception(self.InvalidInstructionSyntax)
                     values_tokens = operation[1:]
                     for value in values_tokens:
@@ -467,9 +466,9 @@ class Compiler():
                         
                         dest_value = values.LiteralValue(self, dest_value_token, builder, scope).value
 
-                        if operator.verify("operator", "add"):
+                        if operator.verify("name", "add"):
                             final_value = builder.add(dest_value, value)
-                        elif operator.verify("operator", "sub"):
+                        elif operator.verify("name", "sub"):
                             final_value = builder.sub(dest_value, value)
                         else:
                             self.raise_exception(self.InvalidInstructionSyntax)
@@ -478,7 +477,6 @@ class Compiler():
                         builder.store(final_value, final_value_ptr)
                             
                         dest_name.assign_value(builder, final_value_ptr)
-
             elif self.verify_literal_value_type(instruction):
                 self.check_inner_function(inner_is_block)
                 if len(s_arguments):
