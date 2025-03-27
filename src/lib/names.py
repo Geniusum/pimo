@@ -51,13 +51,14 @@ class GlobalScope(Name):
 class Variable(Name):
     def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.Type, init_value:ir.Value=None, constant:bool=False):
         self.parent = parent
+        self.is_root = self.parent == self.parent.parent
         self.compiler = compiler
         self.id = self.compiler.generate_id()
         self.module = module
         self.name = name
         self.names = {}
         self.type = type
-        self.var = ir.GlobalVariable(self.module, self.type.as_pointer(), f"var_{self.id}")
+        self.var = ir.GlobalVariable(self.module, self.type.as_pointer(), f"var_{self.id}" if not self.is_root else self.name)
         if init_value:
             self.var.initializer = init_value
         else:
@@ -77,13 +78,14 @@ class Variable(Name):
 class Function(Name):
     def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.FunctionType, genargs:bool=True):
         self.parent = parent
+        self.is_root = self.parent == self.parent.parent
         self.compiler = compiler
         self.id = self.compiler.generate_id()
         self.module = module
         self.name = name
         self.names = {}
         self.type = type
-        nmid = f"func_{self.id}"
+        nmid = f"func_{self.id}" if not self.is_root else self.name
         if self.parent.parent == self.parent and self.name == "main":
             nmid = "main"
         self.func = ir.Function(self.module, self.type, nmid)

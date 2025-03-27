@@ -1,0 +1,3 @@
+func byte main(byte argc, chr[2] argv) {
+    return argc;
+};

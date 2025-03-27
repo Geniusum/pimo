@@ -4,8 +4,11 @@
 - [X] If else elif
 - [ ] Switch case
 - [ ] Jump statements
+- [ ] Fix While and If
 - [X] Procedures (function without args and returned value)
 - [X] Contexts
 - [ ] Macros
 - [ ] Split instructions into functions
 - [ ] Signed numbers
+- [X] Root functions and variables with real names
+- [ ] Fix strings with bitcast

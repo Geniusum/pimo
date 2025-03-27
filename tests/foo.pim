@@ -1,0 +1,3 @@
+func byte main() {
+    return 80;
+}

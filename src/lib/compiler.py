@@ -191,7 +191,7 @@ class Compiler():
                     }) and
                     lang.is_options(args_block) and
                     lang.is_a_segment(segment_block) and
-                    len(s_arguments) == 4
+                    len(s_arguments) == 3
                 ) and not (
                     lang.are_tokens([type_token, name_token]) and
                     lang.verify_tokens_types({
@@ -199,7 +199,7 @@ class Compiler():
                         name_token: "name",
                     }) and
                     lang.is_options(args_block) and
-                    len(s_arguments) == 3
+                    len(s_arguments) == 2
                 ):
                     self.raise_exception(self.InvalidInstructionSyntax, "Syntax : func <type> <name> (<args>, ...) {<function code>; ...};")
                 func_ret_type = lang.get_type_from_token(type_token)
@@ -211,18 +211,19 @@ class Compiler():
                 for tokens in args_parts:
                     arg_type_token = lang.pres_token(tokens, 0)
                     arg_name_token = lang.pres_token(tokens, 1)
+                    arg_type = values.TypeValue(self, arg_type_token, scope).type
                     if not (
                         lang.are_tokens([arg_type_token, arg_name_token]) and
-                        lang.verify_tokens_types({
-                            arg_type_token: "type",
-                            arg_name_token: "name"
-                        }) and
+                        arg_name_token.verify_type("name") and
+                        isinstance(arg_type, ir.Type) and
                         len(tokens) == 2
                     ):
                         self.raise_exception(self.InvalidInstructionSyntax, "Arguments syntax : <type> <name>")
-                    arguments[arg_name_token] = lang.get_type_from_token(arg_type_token)
+                    arguments[arg_name_token] = arg_type
                 has_segment = lang.is_a_segment(segment_block)
-                func_type = ir.FunctionType(func_ret_type, arguments.values())
+                try: func_arg_var = instruction.var
+                except: func_arg_var = False
+                func_type = ir.FunctionType(func_ret_type, arguments.values(), var_arg=func_arg_var)
                 func_class:names.Function = self.scope.append(func_name, names.Function, func_type, genargs=False)
                 func:ir.Function = func_class.func
                 for argument_index, argument in enumerate(func.args):
@@ -396,7 +397,7 @@ class Compiler():
                     varname = varname_token.token_string
                     if not lang.is_a_lower_name(varname):
                         self.raise_exception(self.InvalidNameCase, "Variable names must be in lowercase.")
-                    vartype = values.TypeValue(self, vartype_token, builder, scope).type
+                    vartype = values.TypeValue(self, vartype_token, scope).type
                     varvalue = None
                     if not varvalue_token is None:
                         varvalue = values.LiteralValue(self, varvalue_token, builder, scope, type_context=vartype).value

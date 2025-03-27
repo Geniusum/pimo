@@ -1,0 +1,8 @@
+func. int printf(str s);
+
+func byte main() {
+    str message = "Hello, World!";
+    ^.printf(message);
+
+    return;
+};

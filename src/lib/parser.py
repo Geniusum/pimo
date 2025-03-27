@@ -144,7 +144,6 @@ class Parser():
                         self.raise_sourcecode_exception(line_recreation, segments[-1]["line"], part_column, self.InvalidStringReference)
                     token = lang.Token(string, "string")
                     parts_to_skip = 1
-                    parts_to_skip = 2
                 elif lang.is_a_decimal(part + next_part + next_part_2) and next_part_3 == lang.COLON and lang.is_a_type(next_part_4):
                     token = lang.Token(part + next_part + next_part_2)
                     token.type = lang.get_type_from_token(lang.Token(next_part_4, "type"))
@@ -327,7 +326,7 @@ class Parser():
                 if not lang.is_a_token(last_element): last_element = lang.Token("")
 
                 next_element = utils.get_item_safe(blocks, element_index + 1)
-                next_element_b = utils.get_item_safe(blocks, element_index + 1)
+                next_element_1 = utils.get_item_safe(blocks, element_index + 1)
                 if not lang.is_a_token(next_element): next_element = lang.Token("")
 
                 next_element_2 = utils.get_item_safe(blocks, element_index + 2)
@@ -340,8 +339,11 @@ class Parser():
                 elif lang.is_a_stack(last_element) and element.verify("operator", lang.COLON) and next_element.verify_type("type"):
                     element.type = lang.get_type_from_token(next_element)
                     blocks.pop(element_index + 1)
-                elif element.verify_type("name") and lang.is_options(next_element_b):
-                    element.options = next_element_b
+                elif element.verify_type("name") and lang.is_options(next_element_1):
+                    element.options = next_element_1
+                    blocks.pop(element_index + 1)
+                elif element.verify("instruction", "func") and next_element.verify("operator", lang.DOT):
+                    element.var = True
                     blocks.pop(element_index + 1)
             else:
                 element.elements = self.parse_rest(element.elements)

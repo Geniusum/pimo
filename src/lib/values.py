@@ -231,8 +231,8 @@ class TypeValue(Value):
     class InvalidTypeValue(BaseException): ...
     class InvalidTypeSyntax(BaseException): ...
 
-    def __init__(self, compiler, token, builder, scope):
-        super().__init__(compiler, token, builder, scope)
+    def __init__(self, compiler, token, scope):
+        super().__init__(compiler, token, None, scope)
         if lang.is_a_token(self.token): self.token_string = token.token_string
         self.type:ir.Type|ir.BaseStructType
         self.proc()
@@ -249,6 +249,7 @@ class TypeValue(Value):
                     self.compiler.raise_exception(self.NotType)
             elif self.token.verify_type("type"):
                 self.type = lang.get_type_from_token(self.token)
+                print(self.type)
             else:
                 self.compiler.raise_exception(self.InvalidTypeValue)
             
@@ -269,3 +270,5 @@ class TypeValue(Value):
                         self.compiler.raise_exception(self.InvalidTypeSyntax, "Wanted a real number as length.")
                     length = int(stack.elements[0].token_string)
                     self.type = ir.ArrayType(self.type, length)
+        else:
+            ...  # TODO
