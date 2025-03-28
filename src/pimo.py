@@ -14,6 +14,10 @@ import lib.parser as parser
 import lib.utils as utils
 
 class Main():
+    """
+    The main class for the Pimo compiler.
+    """
+
     class FileNotFound(BaseException): ...
     class InvalidFileExtension(BaseException): ...
     class ExistantLLVMOutput(BaseException): ...
@@ -183,12 +187,14 @@ class Main():
         llvm_file.close()
         self.logger.log(f"The file `{self.llvm_output}` now contains the LLVM module.", "success")
 
+        # Optimize with the `opt` command
         if self.optimize:
             self.logger.log("Optimizing LLVM file...", "work")
             try: self.execute_command(f"opt -O3 -S {self.llvm_output} -o {self.llvm_output}")
             except: pass
             self.logger.log(f"Optimized.", "success")
 
+        # Generate the object file
         self.logger.log("Generating object file...", "work")
         try: self.execute_command(f"llc -filetype=obj {self.llvm_output} -o {self.obj_output}")
         except: pass
@@ -198,6 +204,7 @@ class Main():
             self.error_logger.log(f"Object file not found, maybe due to an error.", "error")
             self.end()
 
+        # Generate the binary file
         self.logger.log("Generating binary file...", "work")
         try: self.execute_command(f"clang {self.obj_output} -o {self.output} -Woverride-module")
         except: pass
@@ -207,6 +214,7 @@ class Main():
             self.error_logger.log(f"Binary file not found, maybe due to an error.", "error")
             self.end()
         
+        # Generate assembly if user asked
         if self.assembly:
             self.logger.log("Generating assembly file...", "work")
             try: self.execute_command(f"clang -S {self.llvm_output} -o {self.asm_output}")
@@ -217,6 +225,7 @@ class Main():
                 self.error_logger.log(f"Assembly file not found, maybe due to an error.", "error")
                 self.end()
         
+        # Delete files
         if not self.keep_llvm:
             self.logger.log("Deleting LLVM file...", "work")
             os.remove(self.llvm_output)
@@ -231,6 +240,7 @@ class Main():
             self.logger.log(f"Changing mod due to the `-c` change mod option.", "info")
             self.execute_command(f"chmod +x {self.output}")
 
+        # Execute the program if user asked
         if self.execute:
             self.logger.log(f"Executing the output...", "work")
             stt = "./"
