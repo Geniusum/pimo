@@ -76,7 +76,7 @@ class Variable(Name):
         builder.store(value, self.var)
 
 class Function(Name):
-    def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.FunctionType, genargs:bool=True):
+    def __init__(self, parent:Name, compiler:any, module:ir.Module, name:str, type:ir.FunctionType, genargs:bool=True, vararg:bool=False):
         self.parent = parent
         self.is_root = self.parent == self.parent.parent
         self.compiler = compiler
@@ -85,6 +85,7 @@ class Function(Name):
         self.name = name
         self.names = {}
         self.type = type
+        self.vararg = vararg
         nmid = f"func_{self.id}" if not self.is_root else self.name
         if self.parent.parent == self.parent and self.name == "main":
             nmid = "main"

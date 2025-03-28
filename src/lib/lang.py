@@ -65,7 +65,10 @@ DELIMITERS = [SEMICOLON, COMMA, OPEN_HOOK, CLOSE_HOOK, OPEN_CURLY_BRACE, CLOSE_C
 REGISTERS = ["ax", "bx", "cx", "dx", "si", "di", "bp", "sp"]
 
 # Instructions
-INSTRUCTIONS = ["func", "return", "if", "elif", "else", "while", "proc", "break", "continue", "ops"]
+INSTRUCTIONS = ["func", "return", "if", "elif", "else", "while", "proc", "break", "continue", "ops",
+                # Other keywords
+                "to"
+]
 
 # Types
 UNSIGNED_8 = ir.IntType(8)

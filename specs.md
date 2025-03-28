@@ -13,3 +13,4 @@
 - [X] Root functions and variables with real names
 - [ ] Fix strings with bitcast
 - [ ] Clean up the code
+- [ ] Multi-line comments

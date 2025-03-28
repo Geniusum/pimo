@@ -63,15 +63,22 @@ class LiteralValue(Value):
                 string = self.token_string
                 string_data = string.encode("utf8") + b'\00'
                 self.size = len(string_data)
-                self.type = lang.STRING
+                
+                string_type = ir.ArrayType(lang.CHAR, self.size)
+
+                self.type = string_type
                 self.set_type_from_context()
                 try: self.type = self.token.type
                 except: pass
                 
-                self.value = ir.Constant(self.type, bytearray(string_data))
+                string_constant = ir.Constant(string_type, bytearray(string_data))
+                
+                string_var = ir.GlobalVariable(self.builder.module, string_type, name=f"string_{self.compiler.generate_id()}")
+                string_var.global_constant = True
+                string_var.initializer = string_constant
 
-                self.value_ptr = self.builder.alloca(self.type, name=f"string_{self.compiler.generate_id()}")
-                self.builder.store(self.value, self.value_ptr)
+                self.value = self.builder.gep(string_var, [ir.Constant(ir.IntType(32), 0), ir.Constant(ir.IntType(32), 0)])
+
                 return
             elif self.token.verify_type("name"):
                 path = self.token_string
@@ -90,7 +97,7 @@ class LiteralValue(Value):
                             if not self.compiler.verify_literal_value_type(element):
                                 self.compiler.raise_exception(self.InvalidElementType)
                             arguments.append(LiteralValue(self.compiler, element, self.builder, self.scope).value)
-                        if len(arguments) > len(found.func.args):
+                        if len(arguments) > len(found.func.args) and not found.vararg:
                             self.compiler.raise_exception(self.InvalidArgumentSyntax, "Too many arguments.")
                         if len(arguments) < len(found.func.args):
                             self.compiler.raise_exception(self.InvalidArgumentSyntax, "Not enough arguments.")
@@ -144,15 +151,17 @@ class LiteralValue(Value):
                     elif element.verify("operator", lang.DASH):
                         value_b = self.stack.pop_val()
                         value_a = self.stack.pop_val()
-                        self.stack.push(self.builder.sub(value_a, value_b))
+                        op_func = self.builder.sub
+                        if value_a.type in [lang.FLOAT_64, lang.FLOAT_32]:  # TODO: Do an get_popularized_type()
+                            op_func = self.builder.fsub
+                        print(op_func, value_a)
+                        self.stack.push(op_func(value_a, value_b))
                     elif element.verify("operator", lang.BANG):
                         value = self.stack.pop_val()
                         cond = self.builder.icmp_unsigned("==", value, lang.FALSE)
-                        self.builder.comment("cheer 1")
                         with self.builder.if_else(cond) as (then, otherwise):
                             with then: self.stack.push(lang.TRUE)
                             with otherwise: self.stack.push(lang.FALSE)
-                        self.builder.comment("cheer 2")
                     elif element.verify("operator", lang.EQUAL_EQUAL):
                         value_b = self.stack.pop_val()
                         value_a = self.stack.pop_val()
@@ -248,7 +257,6 @@ class TypeValue(Value):
                     self.compiler.raise_exception(self.NotType)
             elif self.token.verify_type("type"):
                 self.type = lang.get_type_from_token(self.token)
-                print(self.type)
             else:
                 self.compiler.raise_exception(self.InvalidTypeValue)
             

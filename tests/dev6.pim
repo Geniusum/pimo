@@ -1,8 +1,17 @@
 func. int printf(str s);
 
 func byte main() {
-    str message = "Hello, World!";
-    ^.printf(message);
+    dec i = 5.0;
+    ^.printf("%.6f | ", i);
+    
+    bool cond1 = false;
+    ops (fcmp_equal i 0 to cond1);
+    
+    while cond1 {
+        ops (fsub i 1) (fcmp_equal i 0:dec to cond1);
+    };
+
+    ^.printf("| %.6f", i);
 
     return;
 };

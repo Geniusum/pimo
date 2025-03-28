@@ -224,7 +224,7 @@ class Compiler():
                 try: func_arg_var = instruction.var
                 except: func_arg_var = False
                 func_type = ir.FunctionType(func_ret_type, arguments.values(), var_arg=func_arg_var)
-                func_class:names.Function = self.scope.append(func_name, names.Function, func_type, genargs=False)
+                func_class:names.Function = self.scope.append(func_name, names.Function, func_type, genargs=False, vararg=func_arg_var)
                 func:ir.Function = func_class.func
                 for argument_index, argument in enumerate(func.args):
                     argument.name = list(arguments.keys())[argument_index].token_string
@@ -400,7 +400,8 @@ class Compiler():
                     vartype = values.TypeValue(self, vartype_token, scope).type
                     varvalue = None
                     if not varvalue_token is None:
-                        varvalue = values.LiteralValue(self, varvalue_token, builder, scope, type_context=vartype).value
+                        literal_value = values.LiteralValue(self, varvalue_token, builder, scope, type_context=vartype)
+                        varvalue = literal_value.value
                         varvalue_ptr = builder.alloca(vartype)
                         builder.store(varvalue, varvalue_ptr)
                     var:names.Variable = scope.append(varname, names.Variable, vartype)
@@ -453,9 +454,17 @@ class Compiler():
                         self.raise_exception(self.InvalidInstructionSyntax)
                     values_tokens = operation[1:]
                     for value in values_tokens:
-                        if not self.verify_literal_value_type(value):
+                        if not (self.verify_literal_value_type(value) or value.verify("instruction", "to")):
                             self.raise_exception(self.InvalidInstructionSyntax)
                     dest_value_token = values_tokens[0]
+                    for value_index, value_token in enumerate(values_tokens[1:]):
+                        if value_token.verify("instruction", "to"):
+                            v = values_tokens[1:]  # TODO: Change this
+                            if not len(v) == value_index + 2:
+                                self.raise_exception(self.InvalidInstructionSyntax)
+                            dest_value_token = v[value_index + 1]
+                            for i in range(2): values_tokens.pop()
+                            break
                     if not (lang.is_a_token(dest_value_token) and dest_value_token.verify_type("name")):
                         self.raise_exception(self.InvalidInstructionSyntax)
                     dest_name:names.Variable = scope.get_from_path(dest_value_token.token_string)
@@ -471,8 +480,24 @@ class Compiler():
 
                         if operator.verify("name", "add"):
                             final_value = builder.add(dest_value, value)
+                        elif operator.verify("name", "fadd"):
+                            final_value = builder.fadd(dest_value, value)
                         elif operator.verify("name", "sub"):
                             final_value = builder.sub(dest_value, value)
+                        elif operator.verify("name", "fsub"):
+                            final_value = builder.fsub(dest_value, value)
+                        elif operator.verify("name", "fcmp_equal"):
+                            final_value = builder.fcmp_ordered("==", dest_value, value)
+                        elif operator.verify("name", "fcmp_more_equal"):
+                            final_value = builder.fcmp_ordered(">=", dest_value, value)
+                        elif operator.verify("name", "fcmp_less_equal"):
+                            final_value = builder.fcmp_ordered("<=", dest_value, value)
+                        elif operator.verify("name", "fcmp_not_equal"):
+                            final_value = builder.fcmp_ordered("!=", dest_value, value)
+                        elif operator.verify("name", "fcmp_more"):
+                            final_value = builder.fcmp_ordered(">", dest_value, value)
+                        elif operator.verify("name", "fcmp_less"):
+                            final_value = builder.fcmp_ordered("<", dest_value, value)
                         else:
                             self.raise_exception(self.InvalidInstructionSyntax)
 
