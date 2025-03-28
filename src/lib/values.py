@@ -61,18 +61,17 @@ class LiteralValue(Value):
                 self.value = ir.Constant(self.type, boolean)
             elif self.token.verify_type("string"):
                 string = self.token_string
-                self.size = len(string)
-                self.type = ir.ArrayType(lang.CHAR, self.size)
+                string_data = string.encode("utf8") + b'\00'
+                self.size = len(string_data)
+                self.type = lang.STRING
                 self.set_type_from_context()
                 try: self.type = self.token.type
                 except: pass
-                char_constants = [ir.Constant(lang.CHAR, ord(c)) for c in string]
-                self.value = ir.Constant(self.type, char_constants)
+                
+                self.value = ir.Constant(self.type, bytearray(string_data))
 
                 self.value_ptr = self.builder.alloca(self.type, name=f"string_{self.compiler.generate_id()}")
-                for i, char_value in enumerate(char_constants):
-                    ptr = self.builder.gep(self.value_ptr, [ir.Constant(ir.IntType(32), 0), ir.Constant(ir.IntType(32), i)])
-                    self.builder.store(char_value, ptr)
+                self.builder.store(self.value, self.value_ptr)
                 return
             elif self.token.verify_type("name"):
                 path = self.token_string
